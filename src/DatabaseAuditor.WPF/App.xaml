@@ -1,9 +1,37 @@
-﻿<Application x:Class="DatabaseAuditor.WPF.App"
-             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:local="clr-namespace:DatabaseAuditor.WPF"
-             StartupUri="MainWindow.xaml">
+<Application
+    x:Class="DatabaseAuditor.WPF.App"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:converters="clr-namespace:DatabaseAuditor.WPF.Converters"
+    StartupUri="">
+
     <Application.Resources>
-         
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+
+                <!-- Theme (Dark default — swapped at runtime) -->
+                <ResourceDictionary Source="Themes/DarkTheme.xaml"/>
+
+                <!-- Base styles -->
+                <ResourceDictionary Source="Themes/BaseTheme.xaml"/>
+                <ResourceDictionary Source="Themes/ButtonStyles.xaml"/>
+                <ResourceDictionary Source="Themes/TextBoxStyles.xaml"/>
+                <ResourceDictionary Source="Themes/DataGridStyles.xaml"/>
+                <ResourceDictionary Source="Themes/AnimationStyles.xaml"/>
+
+            </ResourceDictionary.MergedDictionaries>
+
+            <!-- Converters -->
+            <converters:BoolToVisibilityConverter       x:Key="BoolToVisibilityConverter"/>
+            <converters:InverseBoolToVisibilityConverter x:Key="InverseBoolToVisibilityConverter"/>
+            <converters:NullToVisibilityConverter       x:Key="NullToVisibilityConverter"/>
+            <converters:ZeroToVisibilityConverter       x:Key="ZeroToVisibilityConverter"/>
+            <converters:BoolToInverseBoolConverter      x:Key="BoolToInverseBoolConverter"/>
+            <converters:ChangeTypeToColorConverter      x:Key="ChangeTypeToColorConverter"/>
+            <converters:ChangeTypeToBgColorConverter    x:Key="ChangeTypeToBgColorConverter"/>
+            <converters:ChangeTypeToTextConverter       x:Key="ChangeTypeToTextConverter"/>
+            <converters:EnumToStringConverter           x:Key="EnumToStringConverter"/>
+
+        </ResourceDictionary>
     </Application.Resources>
 </Application>
