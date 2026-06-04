@@ -313,7 +313,7 @@ public class PdfReportGenerator : IReportService
                 foreach (var r in results)
                 {
                     var isAlt = seq % 2 == 0;
-                    var bg = isAlt ? LightGray : Colors.White;
+                    var bg = isAlt ? LightGray : "#FFFFFF";
 
                     TableCell(table, seq.ToString(), bg);
                     TableCell(table, r.ObjectType.ToString(), bg);
@@ -365,7 +365,7 @@ public class PdfReportGenerator : IReportService
                 foreach (var r in model.ModifiedObjects)
                 {
                     var isAlt = seq % 2 == 0;
-                    var bg = isAlt ? LightGray : Colors.White;
+                    var bg = isAlt ? LightGray : "#FFFFFF";
                     var diffs = string.Join("\n", r.Differences);
 
                     TableCell(table, seq.ToString(), bg);

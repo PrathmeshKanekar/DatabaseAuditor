@@ -4,7 +4,6 @@ using Dapper;
 using DatabaseAuditor.Domain.Entities;
 using DatabaseAuditor.Providers.Base;
 using global::Oracle.ManagedDataAccess.Client;
-using Oracle.ManagedDataAccess.Client;
 using System.Data;
 
 public class OracleProvider : BaseDatabaseProvider

@@ -30,7 +30,10 @@ public class SqlServerProvider : BaseDatabaseProvider
         try
         {
             using var conn = CreateConnection(connection);
-            await conn.OpenAsync(cancellationToken);
+            if (conn is System.Data.Common.DbConnection dbConn)
+                await dbConn.OpenAsync(cancellationToken);
+            else
+                conn.Open();
             return conn.State == ConnectionState.Open;
         }
         catch
@@ -356,7 +359,7 @@ public class SqlServerProvider : BaseDatabaseProvider
             IsPrimaryKey = (bool)r.IsPrimaryKey,
             IsDisabled = (bool)r.IsDisabled,
             IsClustered = r.IsClustered == 1,
-            Columns = r.Columns?.Split(',').ToList() ?? []
+            Columns = (r.Columns as string)?.Split(',').ToList() ?? new List<string>()
         }).ToList();
     }
 }

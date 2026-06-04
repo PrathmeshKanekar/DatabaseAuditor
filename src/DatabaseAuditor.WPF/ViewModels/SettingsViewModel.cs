@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using DatabaseAuditor.Infrastructure.Settings;
 using DatabaseAuditor.WPF.Helpers;
+using System.IO;
 using Serilog;
 
 public partial class SettingsViewModel : ObservableObject

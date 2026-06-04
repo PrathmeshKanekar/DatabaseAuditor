@@ -337,7 +337,7 @@ public class PostgreSqlProvider : BaseDatabaseProvider
             IsPrimaryKey = (bool)r.isprimarykey,
             IsDisabled = (bool)r.isdisabled,
             IsClustered = (bool)r.isclustered,
-            Columns = r.columns?.Split(',').ToList() ?? []
+            Columns = (r.columns as string)?.Split(',').ToList() ?? new List<string>()
         }).ToList();
     }
 }
