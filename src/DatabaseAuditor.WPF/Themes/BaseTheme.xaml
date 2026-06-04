@@ -1,0 +1,193 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- ===================== FONTS ===================== -->
+    <FontFamily x:Key="PrimaryFont">Segoe UI</FontFamily>
+    <FontFamily x:Key="MonoFont">Cascadia Code, Consolas, Courier New</FontFamily>
+
+    <system:Double x:Key="FontSizeXS"   xmlns:system="clr-namespace:System;assembly=mscorlib">10</system:Double>
+    <system:Double x:Key="FontSizeSM"   xmlns:system="clr-namespace:System;assembly=mscorlib">11</system:Double>
+    <system:Double x:Key="FontSizeMD"   xmlns:system="clr-namespace:System;assembly=mscorlib">12</system:Double>
+    <system:Double x:Key="FontSizeLG"   xmlns:system="clr-namespace:System;assembly=mscorlib">14</system:Double>
+    <system:Double x:Key="FontSizeXL"   xmlns:system="clr-namespace:System;assembly=mscorlib">18</system:Double>
+    <system:Double x:Key="FontSizeXXL"  xmlns:system="clr-namespace:System;assembly=mscorlib">24</system:Double>
+
+    <!-- ===================== CORNER RADIUS ===================== -->
+    <CornerRadius x:Key="RadiusSM">3</CornerRadius>
+    <CornerRadius x:Key="RadiusMD">6</CornerRadius>
+    <CornerRadius x:Key="RadiusLG">10</CornerRadius>
+    <CornerRadius x:Key="RadiusFull">20</CornerRadius>
+
+    <!-- ===================== SPACING ===================== -->
+    <Thickness x:Key="PaddingXS">4</Thickness>
+    <Thickness x:Key="PaddingSM">8</Thickness>
+    <Thickness x:Key="PaddingMD">12</Thickness>
+    <Thickness x:Key="PaddingLG">16</Thickness>
+    <Thickness x:Key="PaddingXL">24</Thickness>
+
+    <!-- ===================== ANIMATIONS ===================== -->
+    <Duration x:Key="AnimFast">0:0:0.15</Duration>
+    <Duration x:Key="AnimNormal">0:0:0.25</Duration>
+    <Duration x:Key="AnimSlow">0:0:0.4</Duration>
+
+    <!-- ===================== TOOLTIP ===================== -->
+    <Style TargetType="ToolTip">
+        <Setter Property="Background"   Value="{DynamicResource SurfaceElevatedBrush}"/>
+        <Setter Property="Foreground"   Value="{DynamicResource TextPrimaryBrush}"/>
+        <Setter Property="BorderBrush"  Value="{DynamicResource BorderBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Padding"      Value="8,4"/>
+        <Setter Property="FontSize"     Value="{StaticResource FontSizeSM}"/>
+        <Setter Property="FontFamily"   Value="{StaticResource PrimaryFont}"/>
+        <Setter Property="Effect">
+            <Setter.Value>
+                <DropShadowEffect BlurRadius="8" ShadowDepth="2"
+                                  Opacity="0.3" Direction="270"/>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ===================== SCROLLBAR ===================== -->
+    <Style x:Key="ScrollBarThumbStyle" TargetType="Thumb">
+        <Setter Property="Background"        Value="{DynamicResource ScrollBarThumbBrush}"/>
+        <Setter Property="BorderThickness"   Value="0"/>
+        <Setter Property="MinHeight"         Value="20"/>
+        <Setter Property="MinWidth"          Value="6"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Thumb">
+                    <Border Background="{TemplateBinding Background}"
+                            CornerRadius="3"
+                            Margin="2"/>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style TargetType="ScrollBar">
+        <Setter Property="Background"  Value="{DynamicResource ScrollBarTrackBrush}"/>
+        <Setter Property="Width"       Value="10"/>
+        <Setter Property="MinWidth"    Value="10"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ScrollBar">
+                    <Grid Background="{TemplateBinding Background}">
+                        <Track x:Name="PART_Track" IsDirectionReversed="True">
+                            <Track.Thumb>
+                                <Thumb Style="{StaticResource ScrollBarThumbStyle}"/>
+                            </Track.Thumb>
+                        </Track>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style TargetType="ScrollViewer">
+        <Setter Property="VerticalScrollBarVisibility"   Value="Auto"/>
+        <Setter Property="HorizontalScrollBarVisibility" Value="Auto"/>
+    </Style>
+
+    <!-- ===================== SEPARATOR ===================== -->
+    <Style TargetType="Separator">
+        <Setter Property="Background"       Value="{DynamicResource DividerBrush}"/>
+        <Setter Property="Height"           Value="1"/>
+        <Setter Property="Margin"           Value="0,4"/>
+        <Setter Property="SnapsToDevicePixels" Value="True"/>
+    </Style>
+
+    <!-- ===================== LABEL ===================== -->
+    <Style TargetType="Label">
+        <Setter Property="Foreground"   Value="{DynamicResource TextPrimaryBrush}"/>
+        <Setter Property="FontFamily"   Value="{StaticResource PrimaryFont}"/>
+        <Setter Property="FontSize"     Value="{StaticResource FontSizeMD}"/>
+        <Setter Property="Padding"      Value="0"/>
+    </Style>
+
+    <!-- ===================== TEXT STYLES ===================== -->
+    <Style x:Key="TextHeading1" TargetType="TextBlock">
+        <Setter Property="FontFamily"   Value="{StaticResource PrimaryFont}"/>
+        <Setter Property="FontSize"     Value="{StaticResource FontSizeXXL}"/>
+        <Setter Property="FontWeight"   Value="SemiBold"/>
+        <Setter Property="Foreground"   Value="{DynamicResource TextPrimaryBrush}"/>
+    </Style>
+
+    <Style x:Key="TextHeading2" TargetType="TextBlock">
+        <Setter Property="FontFamily"   Value="{StaticResource PrimaryFont}"/>
+        <Setter Property="FontSize"     Value="{StaticResource FontSizeXL}"/>
+        <Setter Property="FontWeight"   Value="SemiBold"/>
+        <Setter Property="Foreground"   Value="{DynamicResource TextPrimaryBrush}"/>
+    </Style>
+
+    <Style x:Key="TextHeading3" TargetType="TextBlock">
+        <Setter Property="FontFamily"   Value="{StaticResource PrimaryFont}"/>
+        <Setter Property="FontSize"     Value="{StaticResource FontSizeLG}"/>
+        <Setter Property="FontWeight"   Value="SemiBold"/>
+        <Setter Property="Foreground"   Value="{DynamicResource TextPrimaryBrush}"/>
+    </Style>
+
+    <Style x:Key="TextBody" TargetType="TextBlock">
+        <Setter Property="FontFamily"   Value="{StaticResource PrimaryFont}"/>
+        <Setter Property="FontSize"     Value="{StaticResource FontSizeMD}"/>
+        <Setter Property="Foreground"   Value="{DynamicResource TextPrimaryBrush}"/>
+        <Setter Property="TextWrapping" Value="Wrap"/>
+    </Style>
+
+    <Style x:Key="TextCaption" TargetType="TextBlock">
+        <Setter Property="FontFamily"   Value="{StaticResource PrimaryFont}"/>
+        <Setter Property="FontSize"     Value="{StaticResource FontSizeSM}"/>
+        <Setter Property="Foreground"   Value="{DynamicResource TextSecondaryBrush}"/>
+    </Style>
+
+    <Style x:Key="TextMono" TargetType="TextBlock">
+        <Setter Property="FontFamily"   Value="{StaticResource MonoFont}"/>
+        <Setter Property="FontSize"     Value="{StaticResource FontSizeSM}"/>
+        <Setter Property="Foreground"   Value="{DynamicResource TextPrimaryBrush}"/>
+    </Style>
+
+    <!-- ===================== CARD ===================== -->
+    <Style x:Key="CardStyle" TargetType="Border">
+        <Setter Property="Background"       Value="{DynamicResource SurfaceCardBrush}"/>
+        <Setter Property="BorderBrush"      Value="{DynamicResource BorderBrush}"/>
+        <Setter Property="BorderThickness"  Value="1"/>
+        <Setter Property="CornerRadius"     Value="{StaticResource RadiusMD}"/>
+        <Setter Property="Padding"          Value="{StaticResource PaddingLG}"/>
+        <Setter Property="Effect">
+            <Setter.Value>
+                <DropShadowEffect BlurRadius="6" ShadowDepth="1"
+                                  Opacity="0.15" Direction="270"/>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ===================== SECTION HEADER ===================== -->
+    <Style x:Key="SectionHeaderStyle" TargetType="TextBlock">
+        <Setter Property="FontFamily"   Value="{StaticResource PrimaryFont}"/>
+        <Setter Property="FontSize"     Value="{StaticResource FontSizeLG}"/>
+        <Setter Property="FontWeight"   Value="SemiBold"/>
+        <Setter Property="Foreground"   Value="{DynamicResource AccentBrush}"/>
+        <Setter Property="Margin"       Value="0,0,0,12"/>
+    </Style>
+
+    <!-- ===================== PAGE CONTAINER ===================== -->
+    <Style x:Key="PageContainerStyle" TargetType="Grid">
+        <Setter Property="Background" Value="{DynamicResource BackgroundBrush}"/>
+        <Setter Property="Margin"     Value="0"/>
+    </Style>
+
+    <!-- ===================== STATUS BAR ===================== -->
+    <Style x:Key="StatusBarStyle" TargetType="Border">
+        <Setter Property="Background"       Value="{DynamicResource SurfaceBrush}"/>
+        <Setter Property="BorderBrush"      Value="{DynamicResource BorderBrush}"/>
+        <Setter Property="BorderThickness"  Value="0,1,0,0"/>
+        <Setter Property="Height"           Value="28"/>
+        <Setter Property="Padding"          Value="12,0"/>
+    </Style>
+
+</ResourceDictionary>

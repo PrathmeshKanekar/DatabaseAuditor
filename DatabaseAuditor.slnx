@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/DatabaseAuditor.Application/DatabaseAuditor.Application.csproj" />
+    <Project Path="src/DatabaseAuditor.Domain/DatabaseAuditor.Domain.csproj" />
+    <Project Path="src/DatabaseAuditor.Infrastructure/DatabaseAuditor.Infrastructure.csproj" />
+    <Project Path="src/DatabaseAuditor.Providers/DatabaseAuditor.Providers.csproj" />
+    <Project Path="src/DatabaseAuditor.Reporting/DatabaseAuditor.Reporting.csproj" />
+    <Project Path="src/DatabaseAuditor.WPF/DatabaseAuditor.WPF.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/DatabaseAuditor.Tests/DatabaseAuditor.Tests.csproj" />
+  </Folder>
+</Solution>

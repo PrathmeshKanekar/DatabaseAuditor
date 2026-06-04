@@ -1,0 +1,38 @@
+<UserControl
+    x:Class="DatabaseAuditor.WPF.Controls.StatusBadge"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:converters="clr-namespace:DatabaseAuditor.WPF.Converters">
+
+    <UserControl.Resources>
+        <converters:ChangeTypeToColorConverter x:Key="ChangeTypeToColor"/>
+        <converters:ChangeTypeToBgColorConverter x:Key="ChangeTypeToBg"/>
+        <converters:ChangeTypeToTextConverter x:Key="ChangeTypeToText"/>
+    </UserControl.Resources>
+
+    <Border x:Name="BadgeRoot"
+            CornerRadius="{StaticResource RadiusFull}"
+            Padding="8,3"
+            Background="{Binding ChangeType,
+                RelativeSource={RelativeSource AncestorType=UserControl},
+                Converter={StaticResource ChangeTypeToBg}}"
+            BorderThickness="1"
+            BorderBrush="{Binding ChangeType,
+                RelativeSource={RelativeSource AncestorType=UserControl},
+                Converter={StaticResource ChangeTypeToColor}}"
+            HorizontalAlignment="Left"
+            VerticalAlignment="Center">
+
+        <TextBlock
+            Text="{Binding ChangeType,
+                RelativeSource={RelativeSource AncestorType=UserControl},
+                Converter={StaticResource ChangeTypeToText}}"
+            FontFamily="{StaticResource PrimaryFont}"
+            FontSize="{StaticResource FontSizeXS}"
+            FontWeight="SemiBold"
+            Foreground="{Binding ChangeType,
+                RelativeSource={RelativeSource AncestorType=UserControl},
+                Converter={StaticResource ChangeTypeToColor}}"
+            VerticalAlignment="Center"/>
+    </Border>
+</UserControl>
