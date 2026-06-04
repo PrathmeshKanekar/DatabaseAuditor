@@ -8,6 +8,7 @@ using DatabaseAuditor.Domain.Entities;
 using DatabaseAuditor.WPF.Helpers;
 using Serilog;
 using System.Collections.ObjectModel;
+using Microsoft.Extensions.DependencyInjection;
 
 public partial class ConnectionsViewModel : ObservableObject
 {

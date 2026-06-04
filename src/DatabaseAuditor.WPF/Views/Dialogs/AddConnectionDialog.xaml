@@ -1,0 +1,126 @@
+<Window x:Class="DatabaseAuditor.WPF.Views.Dialogs.AddConnectionDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="{Binding DialogTitle}" Height="500" Width="460"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        ShowInTaskbar="False"
+        Background="{DynamicResource BackgroundBrush}"
+        Foreground="{DynamicResource TextPrimaryBrush}">
+    <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="{DynamicResource RadiusMD}" Padding="24">
+        <Grid>
+            <Grid.RowDefinitions>
+                <!-- Title Header -->
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="12" />
+                <!-- Form Inputs -->
+                <RowDefinition Height="*" />
+                <RowDefinition Height="16" />
+                <!-- Action Buttons -->
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <!-- Header -->
+            <TextBlock Grid.Row="0" Text="{Binding DialogTitle}" Style="{DynamicResource TextHeading2}" FontWeight="Bold"/>
+            <Separator Grid.Row="1"/>
+
+            <!-- Form -->
+            <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" Margin="0,8,0,0">
+                <StackPanel>
+                    <!-- Profile Name -->
+                    <StackPanel Margin="0,0,0,16">
+                        <TextBlock Text="Profile Name" Style="{DynamicResource TextCaption}" FontWeight="SemiBold" Margin="0,0,0,6"/>
+                        <TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" Style="{DynamicResource TextBoxStyle}" Padding="10,6"/>
+                    </StackPanel>
+
+                    <!-- Type & Environment Grid -->
+                    <Grid Margin="0,0,0,16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="12" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+
+                        <!-- DB Type -->
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="Database Type" Style="{DynamicResource TextCaption}" FontWeight="SemiBold" Margin="0,0,0,6"/>
+                            <ComboBox ItemsSource="{Binding DatabaseTypes}"
+                                      SelectedItem="{Binding SelectedDatabaseType}"
+                                      Style="{DynamicResource ComboBoxStyle}"
+                                      Padding="10,6"/>
+                        </StackPanel>
+
+                        <!-- Environment -->
+                        <StackPanel Grid.Column="2">
+                            <TextBlock Text="Environment" Style="{DynamicResource TextCaption}" FontWeight="SemiBold" Margin="0,0,0,6"/>
+                            <ComboBox ItemsSource="{Binding Environments}"
+                                      SelectedItem="{Binding SelectedEnvironment}"
+                                      Style="{DynamicResource ComboBoxStyle}"
+                                      Padding="10,6"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- Server & Port Grid -->
+                    <Grid Margin="0,0,0,16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="3*" />
+                            <ColumnDefinition Width="12" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Server -->
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="Server Host / IP" Style="{DynamicResource TextCaption}" FontWeight="SemiBold" Margin="0,0,0,6"/>
+                            <TextBox Text="{Binding Server, UpdateSourceTrigger=PropertyChanged}" Style="{DynamicResource TextBoxStyle}" Padding="10,6"/>
+                        </StackPanel>
+
+                        <!-- Port -->
+                        <StackPanel Grid.Column="2">
+                            <TextBlock Text="Port" Style="{DynamicResource TextCaption}" FontWeight="SemiBold" Margin="0,0,0,6"/>
+                            <TextBox Text="{Binding Port, UpdateSourceTrigger=PropertyChanged}" Style="{DynamicResource TextBoxStyle}" Padding="10,6"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- Database Name -->
+                    <StackPanel Margin="0,0,0,16">
+                        <TextBlock Text="Database Name / SID" Style="{DynamicResource TextCaption}" FontWeight="SemiBold" Margin="0,0,0,6"/>
+                        <TextBox Text="{Binding DatabaseName, UpdateSourceTrigger=PropertyChanged}" Style="{DynamicResource TextBoxStyle}" Padding="10,6"/>
+                    </StackPanel>
+
+                    <!-- Credentials Grid -->
+                    <Grid Margin="0,0,0,16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="12" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Username -->
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="Username" Style="{DynamicResource TextCaption}" FontWeight="SemiBold" Margin="0,0,0,6"/>
+                            <TextBox Text="{Binding Username, UpdateSourceTrigger=PropertyChanged}" Style="{DynamicResource TextBoxStyle}" Padding="10,6"/>
+                        </StackPanel>
+
+                        <!-- Password -->
+                        <StackPanel Grid.Column="2">
+                            <TextBlock Text="Password" Style="{DynamicResource TextCaption}" FontWeight="SemiBold" Margin="0,0,0,6"/>
+                            <PasswordBox x:Name="PasswordInput" Style="{DynamicResource PasswordBoxStyle}" Padding="10,6"/>
+                        </StackPanel>
+                    </Grid>
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- Buttons -->
+            <Grid Grid.Row="4">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                
+                <Button Grid.Column="0" Click="Cancel_Click" Style="{DynamicResource ButtonStyle}" Content="Cancel" Width="100"/>
+                <Button Grid.Column="2" Click="Save_Click" Style="{DynamicResource ButtonStyle}" Content="Save Profile" Background="{DynamicResource AccentBrush}" Foreground="White" Width="120"/>
+            </Grid>
+        </Grid>
+    </Border>
+</Window>

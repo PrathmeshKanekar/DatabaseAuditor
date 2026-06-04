@@ -1,0 +1,104 @@
+<UserControl x:Class="DatabaseAuditor.WPF.Views.ConnectionsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:DatabaseAuditor.WPF.Views"
+             mc:Ignorable="d" 
+             Padding="24"
+             d:DesignHeight="600" d:DesignWidth="900">
+    <Grid>
+        <Grid.RowDefinitions>
+            <!-- Header Operations Bar -->
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="12" />
+            <!-- Connections Main Workspace -->
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- Operations Bar -->
+        <Grid Grid.Row="0">
+            <Grid.ColumnDefinitions>
+                <!-- Search -->
+                <ColumnDefinition Width="280" />
+                <ColumnDefinition Width="12" />
+                <!-- Actions -->
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <!-- Search box -->
+            <Grid Grid.Column="0">
+                <TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" 
+                         Style="{DynamicResource TextBoxStyle}"
+                         Padding="10,8" />
+                <!-- Search text placeholder -->
+                <TextBlock Text="Search connection profiles..." 
+                           IsHitTestVisible="False"
+                           VerticalAlignment="Center"
+                           Margin="12,0,0,0">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock" BasedOn="{StaticResource TextCaption}">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SearchText}" Value="">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+            </Grid>
+
+            <!-- Action buttons -->
+            <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Command="{Binding AddConnectionCommand}" Style="{DynamicResource ButtonStyle}" Content="Add New" Width="100" Margin="0,0,8,0"/>
+                <Button Command="{Binding EditConnectionCommand}" Style="{DynamicResource ButtonStyle}" Content="Edit" Width="80" Margin="0,0,8,0"
+                        IsEnabled="{Binding SelectedConnection, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter=Invert}"/>
+                <Button Command="{Binding DeleteConnectionCommand}" Style="{DynamicResource ButtonStyle}" Content="Delete" Width="80" Margin="0,0,8,0"
+                        IsEnabled="{Binding SelectedConnection, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter=Invert}"/>
+                <Separator Width="1" Background="{DynamicResource BorderBrush}" Margin="8,0"/>
+                <Button Command="{Binding TestConnectionCommand}" Style="{DynamicResource ButtonStyle}" Content="Test Connection" Width="120" Margin="8,0,8,0"
+                        IsEnabled="{Binding SelectedConnection, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter=Invert}"/>
+                <Button Command="{Binding ImportConnectionsCommand}" Style="{DynamicResource ButtonStyle}" Content="Import" Width="80" Margin="0,0,8,0"/>
+                <Button Command="{Binding ExportConnectionsCommand}" Style="{DynamicResource ButtonStyle}" Content="Export" Width="80"/>
+            </StackPanel>
+        </Grid>
+
+        <!-- Main Workspace -->
+        <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <!-- Table of Connections -->
+            <Border Style="{DynamicResource CardStyle}">
+                <Grid>
+                    <DataGrid ItemsSource="{Binding Connections}"
+                              SelectedItem="{Binding SelectedConnection}"
+                              Style="{DynamicResource DataGridStyle}"
+                              AutoGenerateColumns="False"
+                              IsReadOnly="True"
+                              SelectionMode="Single">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Profile Name" Binding="{Binding Name}" Width="1.5*" />
+                            <DataGridTextColumn Header="Type" Binding="{Binding DatabaseType}" Width="1*" />
+                            <DataGridTextColumn Header="Environment" Binding="{Binding Environment}" Width="1*" />
+                            <DataGridTextColumn Header="Server Address" Binding="{Binding Server}" Width="1.5*" />
+                            <DataGridTextColumn Header="Port" Binding="{Binding Port}" Width="0.6*" />
+                            <DataGridTextColumn Header="Database" Binding="{Binding DatabaseName}" Width="1.2*" />
+                            <DataGridTextColumn Header="User" Binding="{Binding Username}" Width="1*" />
+                        </DataGrid.Columns>
+                    </DataGrid>
+
+                    <!-- Empty State Placeholder -->
+                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center"
+                                Visibility="{Binding HasConnections, Converter={StaticResource InverseBoolToVisibilityConverter}}">
+                        <TextBlock Text="⛁" FontSize="48" Foreground="{DynamicResource TextSecondaryBrush}" HorizontalAlignment="Center" Margin="0,0,0,16"/>
+                        <TextBlock Text="No connection profiles configured" Style="{DynamicResource TextHeading3}" HorizontalAlignment="Center" Margin="0,0,0,16"/>
+                        <TextBlock Text="Click 'Add New' to configure a database source profile." Style="{DynamicResource TextCaption}" HorizontalAlignment="Center"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

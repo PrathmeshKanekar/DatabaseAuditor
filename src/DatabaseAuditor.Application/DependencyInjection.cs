@@ -12,12 +12,12 @@ public static class DependencyInjection
     public static IServiceCollection AddApplication(this IServiceCollection services)
     {
         // Services
-        services.AddScoped<ICompareService, CompareService>();
-        services.AddScoped<ConnectionService>();
+        services.AddTransient<ICompareService, CompareService>();
+        services.AddTransient<ConnectionService>();
 
         // Handlers
-        services.AddScoped<CompareDatabaseHandler>();
-        services.AddScoped<ExportReportHandler>();
+        services.AddTransient<CompareDatabaseHandler>();
+        services.AddTransient<ExportReportHandler>();
 
         // Validators
         services.AddSingleton<ConnectionProfileValidator>();

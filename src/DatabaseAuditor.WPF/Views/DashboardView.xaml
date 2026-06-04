@@ -1,0 +1,141 @@
+<UserControl x:Class="DatabaseAuditor.WPF.Views.DashboardView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:DatabaseAuditor.WPF.Views"
+             mc:Ignorable="d" 
+             Padding="24"
+             d:DesignHeight="600" d:DesignWidth="900">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel>
+            
+            <!-- Welcome Header -->
+            <Grid Margin="0,0,0,20">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="{Binding WelcomeMessage}" Style="{DynamicResource TextHeading2}" FontWeight="Bold"/>
+                    <TextBlock Text="Monitor and audit your database environments." Style="{DynamicResource TextCaption}" Margin="0,4,0,0"/>
+                </StackPanel>
+                <Button Grid.Column="1" Command="{Binding RefreshCommand}" Style="{DynamicResource ButtonStyle}" Content="Refresh" Width="100"/>
+            </Grid>
+
+            <!-- Stats Cards Grid -->
+            <UniformGrid Columns="3" Margin="0,0,0,20">
+                <!-- Card 1: Total Connections -->
+                <Border Style="{DynamicResource CardStyle}" Margin="0,0,12,0">
+                    <StackPanel>
+                        <TextBlock Text="Total Connections" Style="{DynamicResource TextCaption}" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                        <TextBlock Text="{Binding TotalConnections}" FontSize="36" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,8"/>
+                        <TextBlock Text="Registered connection profiles" Style="{DynamicResource TextCaption}"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Card 2: Comparisons Done -->
+                <Border Style="{DynamicResource CardStyle}" Margin="12,0,12,0">
+                    <StackPanel>
+                        <TextBlock Text="Total Audits Run" Style="{DynamicResource TextCaption}" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                        <TextBlock Text="{Binding TotalComparisons}" FontSize="36" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,8"/>
+                        <TextBlock Text="{Binding LastComparedAt, StringFormat='Last run: \{0\}'}" Style="{DynamicResource TextCaption}"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Card 3: Last Audit Result -->
+                <Border Style="{DynamicResource CardStyle}" Margin="12,0,0,0">
+                    <StackPanel>
+                        <TextBlock Text="Last Audit Changes" Style="{DynamicResource TextCaption}" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                        <Grid Margin="0,4,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            
+                            <StackPanel Grid.Column="0" HorizontalAlignment="Center">
+                                <TextBlock Text="Added" Style="{DynamicResource TextCaption}" HorizontalAlignment="Center"/>
+                                <TextBlock Text="{Binding TotalAdded}" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource AddedBrush}" HorizontalAlignment="Center"/>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="1" HorizontalAlignment="Center">
+                                <TextBlock Text="Deleted" Style="{DynamicResource TextCaption}" HorizontalAlignment="Center"/>
+                                <TextBlock Text="{Binding TotalDeleted}" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource DeletedBrush}" HorizontalAlignment="Center"/>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="2" HorizontalAlignment="Center">
+                                <TextBlock Text="Modified" Style="{DynamicResource TextCaption}" HorizontalAlignment="Center"/>
+                                <TextBlock Text="{Binding TotalModified}" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource ModifiedBrush}" HorizontalAlignment="Center"/>
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+            </UniformGrid>
+
+            <!-- Recent Activity List -->
+            <Border Style="{DynamicResource CardStyle}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="12" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Text="Recent Activities" Style="{DynamicResource SectionHeaderStyle}"/>
+                    
+                    <Separator Grid.Row="1"/>
+
+                    <!-- Activity List Box -->
+                    <ListBox Grid.Row="2" 
+                             ItemsSource="{Binding RecentActivities}"
+                             Background="Transparent"
+                             BorderThickness="0"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" Padding="0,12">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="40" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+
+                                        <!-- Status Icon -->
+                                        <TextBlock Grid.Column="0" Text="{Binding StatusIcon}" FontSize="20" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Center">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsSuccess}" Value="True">
+                                                            <Setter Property="Foreground" Value="{DynamicResource UnchangedBrush}"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding IsSuccess}" Value="False">
+                                                            <Setter Property="Foreground" Value="{DynamicResource DeletedBrush}"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+
+                                        <!-- Description -->
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="8,0,0,0">
+                                            <TextBlock Text="{Binding Description}" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                                            <TextBlock Text="{Binding CompareType, StringFormat='Scope: \{0\}'}" Style="{DynamicResource TextCaption}" Margin="0,4,0,0"/>
+                                        </StackPanel>
+
+                                        <!-- Summary & Time -->
+                                        <StackPanel Grid.Column="2" VerticalAlignment="Center" HorizontalAlignment="Right">
+                                            <TextBlock Text="{Binding ResultSummary}" FontSize="13" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" HorizontalAlignment="Right"/>
+                                            <TextBlock Text="{Binding OccurredAtDisplay}" Style="{DynamicResource TextCaption}" HorizontalAlignment="Right" Margin="0,4,0,0"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Grid>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

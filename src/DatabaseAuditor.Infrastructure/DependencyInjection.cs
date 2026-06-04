@@ -5,6 +5,8 @@ using DatabaseAuditor.Infrastructure.Logging;
 using DatabaseAuditor.Infrastructure.Persistence;
 using DatabaseAuditor.Infrastructure.Settings;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Serilog;
 
 public static class DependencyInjection
 {
@@ -21,7 +23,7 @@ public static class DependencyInjection
         services.AddSingleton<AppSettings>(provider =>
         {
             var repo = provider.GetRequiredService<SettingsRepository>();
-            return repo.LoadAsync().GetAwaiter().GetResult();
+            return repo.Load();
         });
 
         return services;

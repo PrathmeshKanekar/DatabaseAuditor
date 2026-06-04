@@ -2,8 +2,7 @@
     x:Class="DatabaseAuditor.WPF.App"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:converters="clr-namespace:DatabaseAuditor.WPF.Converters"
-    StartupUri="">
+    xmlns:converters="clr-namespace:DatabaseAuditor.WPF.Converters">
 
     <Application.Resources>
         <ResourceDictionary>
@@ -31,6 +30,7 @@
             <converters:ChangeTypeToBgColorConverter    x:Key="ChangeTypeToBgColorConverter"/>
             <converters:ChangeTypeToTextConverter       x:Key="ChangeTypeToTextConverter"/>
             <converters:EnumToStringConverter           x:Key="EnumToStringConverter"/>
+            <converters:PageNameToViewConverter         x:Key="PageNameToViewConverter"/>
 
         </ResourceDictionary>
     </Application.Resources>
