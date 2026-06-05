@@ -42,8 +42,8 @@ public class OracleProvider : BaseDatabaseProvider
         const string sql = """
             SELECT
                 t.TABLE_NAME        AS Name,
-                t.OWNER             AS Schema,
-                t.NUM_ROWS          AS RowCount
+                t.OWNER             AS SchemaName,
+                t.NUM_ROWS          AS TotalRows
             FROM ALL_TABLES t
             WHERE t.OWNER = UPPER(:SchemaName)
             ORDER BY t.OWNER, t.TABLE_NAME
@@ -56,8 +56,8 @@ public class OracleProvider : BaseDatabaseProvider
         return rows.Select(r => new TableSchema
         {
             Name = r.NAME,
-            Schema = r.SCHEMA,
-            RowCount = r.ROWCOUNT ?? 0
+            SchemaName = r.SCHEMANAME,
+            TotalRows = r.TOTALROWS ?? 0
         }).ToList();
     }
 
@@ -68,7 +68,7 @@ public class OracleProvider : BaseDatabaseProvider
         const string sql = """
             SELECT
                 c.COLUMN_NAME           AS Name,
-                c.OWNER                 AS Schema,
+                c.OWNER                 AS SchemaName,
                 c.TABLE_NAME            AS TableName,
                 c.COLUMN_ID             AS OrdinalPosition,
                 c.DATA_TYPE             AS DataType,
@@ -114,7 +114,7 @@ public class OracleProvider : BaseDatabaseProvider
         return rows.Select(r => new ColumnSchema
         {
             Name = r.NAME,
-            Schema = r.SCHEMA,
+            SchemaName = r.SCHEMANAME,
             TableName = r.TABLENAME,
             OrdinalPosition = r.ORDINALPOSITION,
             DataType = r.DATATYPE,
@@ -136,7 +136,7 @@ public class OracleProvider : BaseDatabaseProvider
         const string sql = """
             SELECT
                 p.OBJECT_NAME       AS Name,
-                p.OWNER             AS Schema,
+                p.OWNER             AS SchemaName,
                 s.TEXT              AS Definition,
                 p.CREATED           AS CreatedAt,
                 p.LAST_DDL_TIME     AS ModifiedAt
@@ -156,11 +156,11 @@ public class OracleProvider : BaseDatabaseProvider
 
         // Aggregate multi-line source
         var grouped = rows
-            .GroupBy(r => new { Name = (string)r.NAME, Schema = (string)r.SCHEMA })
+            .GroupBy(r => new { Name = (string)r.NAME, SchemaName = (string)r.SCHEMANAME })
             .Select(g => new ProcedureSchema
             {
                 Name = g.Key.Name,
-                Schema = g.Key.Schema,
+                SchemaName = g.Key.SchemaName,
                 Definition = string.Concat(g.Select(r => (string)r.DEFINITION)),
                 CreatedAt = g.First().CREATEDAT,
                 ModifiedAt = g.First().MODIFIEDAT
@@ -180,7 +180,7 @@ public class OracleProvider : BaseDatabaseProvider
         const string sql = """
             SELECT
                 v.VIEW_NAME         AS Name,
-                v.OWNER             AS Schema,
+                v.OWNER             AS SchemaName,
                 v.TEXT              AS Definition
             FROM ALL_VIEWS v
             WHERE v.OWNER = UPPER(:SchemaName)
@@ -194,7 +194,7 @@ public class OracleProvider : BaseDatabaseProvider
         return rows.Select(r => new ViewSchema
         {
             Name = r.NAME,
-            Schema = r.SCHEMA,
+            SchemaName = r.SCHEMANAME,
             Definition = r.DEFINITION,
             NormalizedDefinition = NormalizeDefinition(r.DEFINITION)
         }).ToList();
@@ -207,7 +207,7 @@ public class OracleProvider : BaseDatabaseProvider
         const string sql = """
             SELECT
                 o.OBJECT_NAME       AS Name,
-                o.OWNER             AS Schema,
+                o.OWNER             AS SchemaName,
                 s.TEXT              AS Definition,
                 o.CREATED           AS CreatedAt,
                 o.LAST_DDL_TIME     AS ModifiedAt
@@ -226,11 +226,11 @@ public class OracleProvider : BaseDatabaseProvider
             cancellationToken);
 
         var grouped = rows
-            .GroupBy(r => new { Name = (string)r.NAME, Schema = (string)r.SCHEMA })
+            .GroupBy(r => new { Name = (string)r.NAME, SchemaName = (string)r.SCHEMANAME })
             .Select(g => new FunctionSchema
             {
                 Name = g.Key.Name,
-                Schema = g.Key.Schema,
+                SchemaName = g.Key.SchemaName,
                 Definition = string.Concat(g.Select(r => (string)r.DEFINITION)),
                 FunctionType = "FUNCTION",
                 CreatedAt = g.First().CREATEDAT,
@@ -251,7 +251,7 @@ public class OracleProvider : BaseDatabaseProvider
         const string sql = """
             SELECT
                 t.TRIGGER_NAME      AS Name,
-                t.OWNER             AS Schema,
+                t.OWNER             AS SchemaName,
                 t.TABLE_NAME        AS TableName,
                 t.TRIGGERING_EVENT  AS TriggerEvent,
                 t.TRIGGER_TYPE      AS ActionTiming,
@@ -275,7 +275,7 @@ public class OracleProvider : BaseDatabaseProvider
         return rows.Select(r => new TriggerSchema
         {
             Name = r.NAME,
-            Schema = r.SCHEMA,
+            SchemaName = r.SCHEMANAME,
             TableName = r.TABLENAME,
             TriggerEvent = r.TRIGGEREVENT,
             ActionTiming = r.ACTIONTIMING,
@@ -294,7 +294,7 @@ public class OracleProvider : BaseDatabaseProvider
         const string sql = """
             SELECT
                 ac.CONSTRAINT_NAME      AS Name,
-                ac.OWNER                AS Schema,
+                ac.OWNER                AS SchemaName,
                 ac.TABLE_NAME           AS TableName,
                 ac.CONSTRAINT_TYPE      AS ConstraintType,
                 acc.COLUMN_NAME         AS ColumnName,
@@ -324,7 +324,7 @@ public class OracleProvider : BaseDatabaseProvider
         return rows.Select(r => new ConstraintSchema
         {
             Name = r.NAME,
-            Schema = r.SCHEMA,
+            SchemaName = r.SCHEMANAME,
             TableName = r.TABLENAME,
             ConstraintType = r.CONSTRAINTTYPE switch
             {
@@ -348,7 +348,7 @@ public class OracleProvider : BaseDatabaseProvider
         const string sql = """
             SELECT
                 i.INDEX_NAME        AS Name,
-                i.OWNER             AS Schema,
+                i.OWNER             AS SchemaName,
                 i.TABLE_NAME        AS TableName,
                 i.INDEX_TYPE        AS IndexType,
                 CASE WHEN i.UNIQUENESS = 'UNIQUE' THEN 1 ELSE 0 END AS IsUnique,
@@ -379,7 +379,7 @@ public class OracleProvider : BaseDatabaseProvider
         return rows.Select(r => new IndexSchema
         {
             Name = r.NAME,
-            Schema = r.SCHEMA,
+            SchemaName = r.SCHEMANAME,
             TableName = r.TABLENAME,
             IndexType = r.INDEXTYPE,
             IsUnique = r.ISUNIQUE == 1,

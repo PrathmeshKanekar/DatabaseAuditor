@@ -21,6 +21,8 @@ public class ReportModel
     public string TargetServer { get; set; } = string.Empty;
     public DatabaseType TargetDatabaseType { get; set; }
     public CompareType CompareType { get; set; }
+    public ComparisonScope ComparisonScope { get; set; }
+    public List<string> SelectedObjects { get; set; } = [];
 
     // Execution
     public DateTime StartedAt { get; set; }
@@ -56,6 +58,8 @@ public class ReportModel
             TargetServer = session.Target.Server,
             TargetDatabaseType = session.Target.DatabaseType,
             CompareType = session.CompareType,
+            ComparisonScope = session.ComparisonScope,
+            SelectedObjects = session.SelectedObjects,
             StartedAt = session.StartedAt,
             CompletedAt = session.CompletedAt ?? DateTime.Now,
             ExecutionTime = session.ExecutionTime,

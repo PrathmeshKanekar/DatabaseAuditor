@@ -5,6 +5,10 @@ using DatabaseAuditor.Domain.Entities;
 public interface IDatabaseProvider
 {
     Task<bool> TestConnectionAsync(ConnectionProfile connection, CancellationToken cancellationToken = default);
+    Task<List<string>> GetTableNamesAsync(ConnectionProfile connection, CancellationToken cancellationToken = default);
+    Task<List<string>> GetProcedureNamesAsync(ConnectionProfile connection, CancellationToken cancellationToken = default);
+    Task<TableSchema?> GetTableAsync(ConnectionProfile connection, string schemaName, string tableName, CancellationToken cancellationToken = default);
+    Task<ProcedureSchema?> GetProcedureAsync(ConnectionProfile connection, string schemaName, string procedureName, CancellationToken cancellationToken = default);
     Task<List<TableSchema>> GetTablesAsync(ConnectionProfile connection, CancellationToken cancellationToken = default);
     Task<List<ColumnSchema>> GetColumnsAsync(ConnectionProfile connection, CancellationToken cancellationToken = default);
     Task<List<ProcedureSchema>> GetProceduresAsync(ConnectionProfile connection, CancellationToken cancellationToken = default);

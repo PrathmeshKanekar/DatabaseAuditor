@@ -10,5 +10,7 @@ public interface ICompareService
         ConnectionProfile source,
         ConnectionProfile target,
         CompareType compareType,
+        ComparisonScope comparisonScope,
+        IReadOnlyCollection<string>? selectedObjects = null,
         CancellationToken cancellationToken = default);
 }

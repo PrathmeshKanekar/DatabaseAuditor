@@ -8,7 +8,7 @@ using DatabaseAuditor.Providers.Oracle;
 using DatabaseAuditor.Providers.PostgreSql;
 using DatabaseAuditor.Providers.SqlServer;
 
-public class DatabaseProviderFactory
+public class DatabaseProviderFactory : IDatabaseProviderResolver
 {
     private readonly IReadOnlyDictionary<DatabaseType, IDatabaseProvider> _providers;
 

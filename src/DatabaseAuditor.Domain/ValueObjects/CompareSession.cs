@@ -9,6 +9,8 @@ public class CompareSession
     public ConnectionProfile Source { get; set; } = null!;
     public ConnectionProfile Target { get; set; } = null!;
     public CompareType CompareType { get; set; }
+    public ComparisonScope ComparisonScope { get; set; } = ComparisonScope.EntireDatabase;
+    public List<string> SelectedObjects { get; set; } = [];
     public List<CompareResult> Results { get; set; } = [];
     public DateTime StartedAt { get; set; } = DateTime.UtcNow;
     public DateTime? CompletedAt { get; set; }

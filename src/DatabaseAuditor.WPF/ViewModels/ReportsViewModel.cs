@@ -69,6 +69,8 @@ public partial class ReportsViewModel : ObservableObject
     [ObservableProperty] private string _sourceInfo = string.Empty;
     [ObservableProperty] private string _targetInfo = string.Empty;
     [ObservableProperty] private string _compareType = string.Empty;
+    [ObservableProperty] private string _comparisonScope = string.Empty;
+    [ObservableProperty] private string _selectedObjectsSummary = string.Empty;
     [ObservableProperty] private string _executionTime = string.Empty;
 
     public ReportsViewModel(
@@ -84,6 +86,8 @@ public partial class ReportsViewModel : ObservableObject
         _currentSession = session;
         HasSession = true;
 
+        Log.Information("ReportsViewModel Loaded Results: {Count}", session.Results.Count);
+
         TotalObjects = session.TotalObjects;
         AddedCount = session.AddedCount;
         DeletedCount = session.DeletedCount;
@@ -91,9 +95,15 @@ public partial class ReportsViewModel : ObservableObject
         SourceInfo = session.Source.DisplayName;
         TargetInfo = session.Target.DisplayName;
         CompareType = session.CompareType.ToString();
+        ComparisonScope = session.ComparisonScope.ToString();
+        SelectedObjectsSummary = session.SelectedObjects.Count == 0
+            ? "All objects in scope"
+            : string.Join(", ", session.SelectedObjects.Take(10)) +
+              (session.SelectedObjects.Count > 10 ? $" (+{session.SelectedObjects.Count - 10} more)" : string.Empty);
         ExecutionTime = $"{session.ExecutionTime.TotalSeconds:F2}s";
 
         SessionSummary = $"{session.Source.DatabaseName} vs {session.Target.DatabaseName}" +
+                         $"  |  {session.ComparisonScope}" +
                          $"  |  {session.CompareType}" +
                          $"  |  {session.TotalObjects} objects";
 
@@ -102,7 +112,7 @@ public partial class ReportsViewModel : ObservableObject
         StatusMessage = string.Empty;
         HasError = false;
 
-        Log.Information("[Reports] Session loaded: {Summary}", SessionSummary);
+        Log.Information("[Reports] Session loaded: {Summary} Results={Count}", SessionSummary, session.Results.Count);
     }
 
     [RelayCommand]

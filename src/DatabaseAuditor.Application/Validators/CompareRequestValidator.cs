@@ -20,6 +20,15 @@ public class CompareRequestValidator
         if (!Enum.IsDefined(typeof(Domain.Enums.CompareType), command.CompareType))
             result.AddError("Invalid compare type selected.");
 
+        if (!Enum.IsDefined(typeof(Domain.Enums.ComparisonScope), command.ComparisonScope))
+            result.AddError("Invalid comparison scope selected.");
+
+        if (command.ComparisonScope != Domain.Enums.ComparisonScope.EntireDatabase &&
+            command.SelectedObjects.Count == 0)
+        {
+            result.AddError("Please select at least one object to compare.");
+        }
+
         return result;
     }
 }

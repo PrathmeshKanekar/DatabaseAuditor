@@ -39,7 +39,7 @@ public partial class ResultsViewModel : ObservableObject
     private bool _showModified = true;
 
     [ObservableProperty]
-    private bool _showUnchanged = false;
+    private bool _showUnchanged = true;
 
     [ObservableProperty]
     private int _totalCount;
@@ -89,6 +89,8 @@ public partial class ResultsViewModel : ObservableObject
         _currentSession = session;
         _allResults = session.Results;
 
+        Log.Information("ResultsViewModel Loaded Results: {Count}", session.Results.Count);
+
         TotalCount = session.TotalObjects;
         AddedCount = session.AddedCount;
         DeletedCount = session.DeletedCount;
@@ -104,7 +106,7 @@ public partial class ResultsViewModel : ObservableObject
 
         ApplyFilter();
 
-        Log.Information("[Results] Session loaded. Total={Total}", TotalCount);
+        Log.Information("[Results] Session loaded. Total={Total} Filtered={Filtered}", TotalCount, FilteredCount);
     }
 
     [RelayCommand]

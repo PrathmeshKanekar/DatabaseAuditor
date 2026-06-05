@@ -64,6 +64,8 @@ public partial class MainViewModel : ObservableObject
 
     private void OnCompareCompleted(object? sender, DatabaseAuditor.Domain.ValueObjects.CompareSession session)
     {
+        Log.Information("[MainViewModel] CompareCompleted received. SessionId={SessionId} Results={Count}",
+            session.Id, session.Results.Count);
         _dashboardViewModel.ApplySession(session);
         _resultsViewModel.LoadSession(session);
         _reportsViewModel.LoadSession(session);

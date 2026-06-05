@@ -73,28 +73,108 @@
             <Border Style="{DynamicResource CardStyle}" Margin="0,0,0,20">
                 <StackPanel>
                     <TextBlock Text="Comparison Settings" Style="{DynamicResource SectionHeaderStyle}" Margin="0,0,0,12"/>
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="24" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
+                    <StackPanel>
+                        <TextBlock Text="Comparison Scope" Style="{DynamicResource TextCaption}" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                        <ComboBox ItemsSource="{Binding ComparisonScopes}"
+                                  SelectedItem="{Binding SelectedComparisonScope}"
+                                  Style="{DynamicResource ComboBoxStyle}"
+                                  DisplayMemberPath="Display"
+                                  Padding="10,8"
+                                  Margin="0,0,0,16" />
 
-                        <!-- Scope Selection -->
-                        <StackPanel Grid.Column="0">
-                            <TextBlock Text="Comparison Scope / Object Type" Style="{DynamicResource TextCaption}" FontWeight="SemiBold" Margin="0,0,0,8"/>
-                            <ComboBox ItemsSource="{Binding CompareTypes}"
-                                      SelectedItem="{Binding SelectedCompareType}"
-                                      Style="{DynamicResource ComboBoxStyle}"
-                                      DisplayMemberPath="Display"
-                                      Padding="10,8" />
-                        </StackPanel>
+                        <Grid Visibility="{Binding IsObjectSelectionVisible, Converter={StaticResource BoolToVisibilityConverter}}">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="12" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="12" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
 
-                        <!-- Options -->
-                        <StackPanel Grid.Column="2" VerticalAlignment="Center">
-                            <CheckBox IsChecked="{Binding IncludeUnchanged}" Style="{DynamicResource CheckBoxStyle}" Content="Include unchanged items in final report"/>
-                        </StackPanel>
-                    </Grid>
+                            <StackPanel Grid.Row="0">
+                                <TextBlock Text="Object Type" Style="{DynamicResource TextCaption}" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                                <ComboBox ItemsSource="{Binding ObjectTypes}"
+                                          SelectedItem="{Binding SelectedObjectType}"
+                                          Style="{DynamicResource ComboBoxStyle}"
+                                          DisplayMemberPath="Display"
+                                          Padding="10,8" />
+                            </StackPanel>
+
+                            <StackPanel Grid.Row="2">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="Search Objects" Style="{DynamicResource TextCaption}" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                                    <Button Grid.Column="1" Command="{Binding RefreshObjectsCommand}" Style="{DynamicResource ButtonStyle}" Content="Refresh" Padding="10,4"/>
+                                </Grid>
+                                <TextBox Text="{Binding ObjectSearchText, UpdateSourceTrigger=PropertyChanged}"
+                                         Style="{DynamicResource TextBoxStyle}"
+                                         Padding="10,8" />
+                            </StackPanel>
+
+                            <Border Grid.Row="4" Background="{DynamicResource SurfaceBrush}" CornerRadius="{DynamicResource RadiusSM}" Padding="12">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="8" />
+                                        <RowDefinition Height="*" />
+                                    </Grid.RowDefinitions>
+
+                                    <Grid Grid.Row="0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="{Binding SelectedObjectsSummary}" Style="{DynamicResource TextCaption}" VerticalAlignment="Center"/>
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal"
+                                                    Visibility="{Binding IsMultipleObjectMode, Converter={StaticResource BoolToVisibilityConverter}}">
+                                            <Button Command="{Binding SelectAllObjectsCommand}" Style="{DynamicResource ButtonStyle}" Content="Select All" Padding="10,4" Margin="0,0,8,0"/>
+                                            <Button Command="{Binding DeselectAllObjectsCommand}" Style="{DynamicResource ButtonStyle}" Content="Deselect All" Padding="10,4" Margin="0,0,8,0"/>
+                                            <Button Command="{Binding InvertSelectionCommand}" Style="{DynamicResource ButtonStyle}" Content="Invert" Padding="10,4"/>
+                                        </StackPanel>
+                                    </Grid>
+
+                                    <ComboBox Grid.Row="2"
+                                              ItemsSource="{Binding FilteredObjects}"
+                                              SelectedItem="{Binding SelectedObjectItem}"
+                                              DisplayMemberPath="Name"
+                                              Style="{DynamicResource ComboBoxStyle}"
+                                              Padding="10,8"
+                                              Visibility="{Binding IsSingleObjectMode, Converter={StaticResource BoolToVisibilityConverter}}" />
+
+                                    <Grid Grid.Row="2" Visibility="{Binding IsMultipleObjectMode, Converter={StaticResource BoolToVisibilityConverter}}">
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="*" />
+                                        </Grid.RowDefinitions>
+
+                                        <TextBlock Grid.Row="0"
+                                                   Text="{Binding IsLoadingObjects, StringFormat='Loading objects: {0}'}"
+                                                   Style="{DynamicResource TextCaption}"
+                                                   Visibility="{Binding IsLoadingObjects, Converter={StaticResource BoolToVisibilityConverter}}"
+                                                   Margin="0,0,0,8"/>
+
+                                        <ListBox Grid.Row="1"
+                                                 ItemsSource="{Binding FilteredObjects}"
+                                                 Background="Transparent"
+                                                 BorderThickness="0"
+                                                 ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                                 MaxHeight="260">
+                                            <ListBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <CheckBox IsChecked="{Binding IsSelected}" Content="{Binding Name}" Margin="0,4,0,4"/>
+                                                </DataTemplate>
+                                            </ListBox.ItemTemplate>
+                                        </ListBox>
+                                    </Grid>
+                                </Grid>
+                            </Border>
+                        </Grid>
+
+                        <CheckBox IsChecked="{Binding IncludeUnchanged}" Style="{DynamicResource CheckBoxStyle}" Content="Include unchanged items in final report" Margin="0,16,0,0"/>
+                    </StackPanel>
                 </StackPanel>
             </Border>
 

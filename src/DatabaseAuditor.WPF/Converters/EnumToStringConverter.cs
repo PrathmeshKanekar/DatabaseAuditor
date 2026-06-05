@@ -19,6 +19,7 @@ public class EnumToStringConverter : IValueConverter
             DatabaseType dt => FormatDatabaseType(dt),
             EnvironmentType et => FormatEnvironmentType(et),
             CompareType ct => FormatCompareType(ct),
+            ComparisonScope cs => FormatComparisonScope(cs),
             ChangeType ch => FormatChangeType(ch),
             ObjectStatus os => FormatObjectStatus(os),
             _ => value.ToString() ?? string.Empty
@@ -79,6 +80,14 @@ public class EnumToStringConverter : IValueConverter
         _ => ct.ToString()
     };
 
+    private static string FormatComparisonScope(ComparisonScope scope) => scope switch
+    {
+        ComparisonScope.EntireDatabase => "Entire Database",
+        ComparisonScope.SingleObject => "Single Object",
+        ComparisonScope.MultipleObjects => "Multiple Objects",
+        _ => scope.ToString()
+    };
+
     private static string FormatChangeType(ChangeType ch) => ch switch
     {
         ChangeType.Added => "Added",
@@ -128,15 +137,18 @@ public static class EnumHelper
 
     public static List<EnumDisplayItem> GetCompareTypes() =>
     [
-        new() { Value = CompareType.Database,   Display = "Database (Full)"    },
         new() { Value = CompareType.Table,      Display = "Tables"             },
-        new() { Value = CompareType.Column,     Display = "Columns"            },
         new() { Value = CompareType.Procedure,  Display = "Stored Procedures"  },
         new() { Value = CompareType.View,       Display = "Views"              },
         new() { Value = CompareType.Function,   Display = "Functions"          },
-        new() { Value = CompareType.Trigger,    Display = "Triggers"           },
-        new() { Value = CompareType.Constraint, Display = "Constraints"        },
-        new() { Value = CompareType.Index,      Display = "Indexes"            }
+        new() { Value = CompareType.Trigger,    Display = "Triggers"           }
+    ];
+
+    public static List<EnumDisplayItem> GetComparisonScopes() =>
+    [
+        new() { Value = ComparisonScope.EntireDatabase, Display = "Entire Database" },
+        new() { Value = ComparisonScope.SingleObject, Display = "Single Object" },
+        new() { Value = ComparisonScope.MultipleObjects, Display = "Multiple Objects" }
     ];
 
     public static int GetDefaultPort(DatabaseType dbType) => dbType switch

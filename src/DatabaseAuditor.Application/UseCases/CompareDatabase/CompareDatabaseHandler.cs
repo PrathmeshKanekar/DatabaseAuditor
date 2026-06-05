@@ -30,6 +30,8 @@ public class CompareDatabaseHandler
             source,
             target,
             command.CompareType,
+            command.ComparisonScope,
+            command.SelectedObjects,
             cancellationToken);
 
         if (!command.IncludeUnchanged)

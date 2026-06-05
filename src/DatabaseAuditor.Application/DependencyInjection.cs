@@ -14,6 +14,7 @@ public static class DependencyInjection
         // Services
         services.AddTransient<ICompareService, CompareService>();
         services.AddTransient<ConnectionService>();
+        services.AddTransient<DatabaseObjectService>();
 
         // Handlers
         services.AddTransient<CompareDatabaseHandler>();
