@@ -8,16 +8,16 @@ using DatabaseAuditor.Domain.Interfaces;
 public class ConnectionService
 {
     private readonly IConnectionRepository _repository;
-    private readonly IDatabaseProvider _providerFactory;
+    private readonly IDatabaseProviderResolver _providerResolver;
     private readonly ConnectionProfileValidator _validator;
 
     public ConnectionService(
         IConnectionRepository repository,
-        IDatabaseProvider providerFactory,
+        IDatabaseProviderResolver providerResolver,
         ConnectionProfileValidator validator)
     {
         _repository = repository;
-        _providerFactory = providerFactory;
+        _providerResolver = providerResolver;
         _validator = validator;
     }
 
@@ -84,7 +84,8 @@ public class ConnectionService
         var profile = await _repository.GetByIdAsync(id)
             ?? throw new InvalidOperationException($"Connection '{id}' not found.");
 
-        return await _providerFactory.TestConnectionAsync(profile, cancellationToken);
+        var provider = _providerResolver.GetProvider(profile.DatabaseType);
+        return await provider.TestConnectionAsync(profile, cancellationToken);
     }
 
     public async Task<List<ConnectionProfile>> ImportAsync(string filePath)

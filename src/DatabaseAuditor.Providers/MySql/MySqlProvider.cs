@@ -46,10 +46,10 @@ public class MySqlProvider : BaseDatabaseProvider
         const string sql = """
             SELECT
                 t.TABLE_NAME        AS Name,
-                t.TABLE_SCHEMA      AS `Schema`,
+                t.TABLE_SCHEMA      AS SchemaName,
                 t.ENGINE            AS Engine,
                 t.TABLE_COLLATION   AS Collation,
-                t.TABLE_ROWS        AS RowCount
+                t.TABLE_ROWS        AS TotalRows
             FROM information_schema.TABLES t
             WHERE t.TABLE_TYPE = 'BASE TABLE'
               AND t.TABLE_SCHEMA = @DatabaseName
@@ -63,10 +63,10 @@ public class MySqlProvider : BaseDatabaseProvider
         return rows.Select(r => new TableSchema
         {
             Name = r.Name,
-            Schema = r.Schema,
+            SchemaName = r.SchemaName,
             Engine = r.Engine,
             Collation = r.Collation,
-            RowCount = r.RowCount ?? 0
+            TotalRows = r.TotalRows ?? 0
         }).ToList();
     }
 
@@ -77,7 +77,7 @@ public class MySqlProvider : BaseDatabaseProvider
         const string sql = """
             SELECT
                 c.COLUMN_NAME           AS Name,
-                c.TABLE_SCHEMA          AS `Schema`,
+                c.TABLE_SCHEMA          AS SchemaName,
                 c.TABLE_NAME            AS TableName,
                 c.ORDINAL_POSITION      AS OrdinalPosition,
                 c.DATA_TYPE             AS DataType,
@@ -104,7 +104,7 @@ public class MySqlProvider : BaseDatabaseProvider
         return rows.Select(r => new ColumnSchema
         {
             Name = r.Name,
-            Schema = r.Schema,
+            SchemaName = r.SchemaName,
             TableName = r.TableName,
             OrdinalPosition = r.OrdinalPosition,
             DataType = r.DataType,
@@ -128,7 +128,7 @@ public class MySqlProvider : BaseDatabaseProvider
         const string sql = """
             SELECT
                 r.ROUTINE_NAME          AS Name,
-                r.ROUTINE_SCHEMA        AS `Schema`,
+                r.ROUTINE_SCHEMA        AS SchemaName,
                 r.ROUTINE_DEFINITION    AS Definition,
                 r.CREATED               AS CreatedAt,
                 r.LAST_ALTERED          AS ModifiedAt
@@ -145,7 +145,7 @@ public class MySqlProvider : BaseDatabaseProvider
         return rows.Select(r => new ProcedureSchema
         {
             Name = r.Name,
-            Schema = r.Schema,
+            SchemaName = r.SchemaName,
             Definition = r.Definition,
             NormalizedDefinition = NormalizeDefinition(r.Definition),
             CreatedAt = r.CreatedAt,
@@ -160,7 +160,7 @@ public class MySqlProvider : BaseDatabaseProvider
         const string sql = """
             SELECT
                 v.TABLE_NAME            AS Name,
-                v.TABLE_SCHEMA          AS `Schema`,
+                v.TABLE_SCHEMA          AS SchemaName,
                 v.VIEW_DEFINITION       AS Definition,
                 v.IS_UPDATABLE          AS IsUpdatable
             FROM information_schema.VIEWS v
@@ -175,7 +175,7 @@ public class MySqlProvider : BaseDatabaseProvider
         return rows.Select(r => new ViewSchema
         {
             Name = r.Name,
-            Schema = r.Schema,
+            SchemaName = r.SchemaName,
             Definition = r.Definition,
             NormalizedDefinition = NormalizeDefinition(r.Definition),
             IsUpdatable = r.IsUpdatable == "YES"
@@ -189,7 +189,7 @@ public class MySqlProvider : BaseDatabaseProvider
         const string sql = """
             SELECT
                 r.ROUTINE_NAME          AS Name,
-                r.ROUTINE_SCHEMA        AS `Schema`,
+                r.ROUTINE_SCHEMA        AS SchemaName,
                 r.ROUTINE_DEFINITION    AS Definition,
                 r.DATA_TYPE             AS ReturnType,
                 r.ROUTINE_TYPE          AS FunctionType,
@@ -208,7 +208,7 @@ public class MySqlProvider : BaseDatabaseProvider
         return rows.Select(r => new FunctionSchema
         {
             Name = r.Name,
-            Schema = r.Schema,
+            SchemaName = r.SchemaName,
             Definition = r.Definition,
             NormalizedDefinition = NormalizeDefinition(r.Definition),
             ReturnType = r.ReturnType,
@@ -225,7 +225,7 @@ public class MySqlProvider : BaseDatabaseProvider
         const string sql = """
             SELECT
                 t.TRIGGER_NAME          AS Name,
-                t.TRIGGER_SCHEMA        AS `Schema`,
+                t.TRIGGER_SCHEMA        AS SchemaName,
                 t.EVENT_OBJECT_TABLE    AS TableName,
                 t.EVENT_MANIPULATION    AS TriggerEvent,
                 t.ACTION_TIMING         AS ActionTiming,
@@ -243,7 +243,7 @@ public class MySqlProvider : BaseDatabaseProvider
         return rows.Select(r => new TriggerSchema
         {
             Name = r.Name,
-            Schema = r.Schema,
+            SchemaName = r.SchemaName,
             TableName = r.TableName,
             TriggerEvent = r.TriggerEvent,
             ActionTiming = r.ActionTiming,
@@ -261,7 +261,7 @@ public class MySqlProvider : BaseDatabaseProvider
         const string sql = """
             SELECT
                 tc.CONSTRAINT_NAME      AS Name,
-                tc.TABLE_SCHEMA         AS `Schema`,
+                tc.TABLE_SCHEMA         AS SchemaName,
                 tc.TABLE_NAME           AS TableName,
                 tc.CONSTRAINT_TYPE      AS ConstraintType,
                 kcu.COLUMN_NAME         AS ColumnName,
@@ -287,7 +287,7 @@ public class MySqlProvider : BaseDatabaseProvider
         return rows.Select(r => new ConstraintSchema
         {
             Name = r.Name,
-            Schema = r.Schema,
+            SchemaName = r.SchemaName,
             TableName = r.TableName,
             ConstraintType = r.ConstraintType,
             ColumnName = r.ColumnName,
@@ -304,7 +304,7 @@ public class MySqlProvider : BaseDatabaseProvider
         const string sql = """
             SELECT
                 s.INDEX_NAME            AS Name,
-                s.TABLE_SCHEMA          AS `Schema`,
+                s.TABLE_SCHEMA          AS SchemaName,
                 s.TABLE_NAME            AS TableName,
                 s.INDEX_TYPE            AS IndexType,
                 CASE WHEN s.NON_UNIQUE = 0 THEN 1 ELSE 0 END AS IsUnique,
@@ -326,7 +326,7 @@ public class MySqlProvider : BaseDatabaseProvider
         return rows.Select(r => new IndexSchema
         {
             Name = r.Name,
-            Schema = r.Schema,
+            SchemaName = r.SchemaName,
             TableName = r.TableName,
             IndexType = r.IndexType,
             IsUnique = r.IsUnique == 1,

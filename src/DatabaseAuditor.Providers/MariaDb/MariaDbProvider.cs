@@ -59,7 +59,7 @@ public class MariaDbProvider : MySqlProvider
         const string sql = """
             SELECT
                 t.TRIGGER_NAME          AS Name,
-                t.TRIGGER_SCHEMA        AS `Schema`,
+                t.TRIGGER_SCHEMA        AS SchemaName,
                 t.EVENT_OBJECT_TABLE    AS TableName,
                 t.EVENT_MANIPULATION    AS TriggerEvent,
                 t.ACTION_TIMING         AS ActionTiming,
@@ -78,7 +78,7 @@ public class MariaDbProvider : MySqlProvider
         return rows.Select(r => new TriggerSchema
         {
             Name = r.Name,
-            Schema = r.Schema,
+            SchemaName = r.SchemaName,
             TableName = r.TableName,
             TriggerEvent = r.TriggerEvent,
             ActionTiming = r.ActionTiming,

@@ -24,11 +24,11 @@ public static class DependencyInjection
 
         // ViewModels
         services.AddSingleton<MainViewModel>();
-        services.AddTransient<CompareViewModel>();
+        services.AddSingleton<CompareViewModel>();
         services.AddTransient<ConnectionsViewModel>();
-        services.AddTransient<DashboardViewModel>();
-        services.AddTransient<ReportsViewModel>();
-        services.AddTransient<ResultsViewModel>();
+        services.AddSingleton<DashboardViewModel>();
+        services.AddSingleton<ReportsViewModel>();
+        services.AddSingleton<ResultsViewModel>();
         services.AddTransient<SettingsViewModel>();
         services.AddTransient<AddConnectionViewModel>();
 

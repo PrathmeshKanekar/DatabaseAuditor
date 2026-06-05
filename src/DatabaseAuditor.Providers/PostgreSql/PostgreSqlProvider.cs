@@ -45,8 +45,8 @@ public class PostgreSqlProvider : BaseDatabaseProvider
         const string sql = """
             SELECT
                 t.table_name        AS Name,
-                t.table_schema      AS Schema,
-                pg_stat_user_tables.n_live_tup AS RowCount
+                t.table_schema      AS SchemaName,
+                pg_stat_user_tables.n_live_tup AS TotalRows
             FROM information_schema.tables t
             LEFT JOIN pg_stat_user_tables
                 ON pg_stat_user_tables.relname = t.table_name
@@ -61,8 +61,8 @@ public class PostgreSqlProvider : BaseDatabaseProvider
         return rows.Select(r => new TableSchema
         {
             Name = r.name,
-            Schema = r.schema,
-            RowCount = r.rowcount ?? 0
+            SchemaName = r.schemaname,
+            TotalRows = r.totalrows ?? 0
         }).ToList();
     }
 
@@ -73,7 +73,7 @@ public class PostgreSqlProvider : BaseDatabaseProvider
         const string sql = """
             SELECT
                 c.column_name           AS Name,
-                c.table_schema          AS Schema,
+                c.table_schema          AS SchemaName,
                 c.table_name            AS TableName,
                 c.ordinal_position      AS OrdinalPosition,
                 c.data_type             AS DataType,
@@ -114,7 +114,7 @@ public class PostgreSqlProvider : BaseDatabaseProvider
         return rows.Select(r => new ColumnSchema
         {
             Name = r.name,
-            Schema = r.schema,
+            SchemaName = r.schemaname,
             TableName = r.tablename,
             OrdinalPosition = r.ordinalposition,
             DataType = r.datatype,
@@ -137,7 +137,7 @@ public class PostgreSqlProvider : BaseDatabaseProvider
         const string sql = """
             SELECT
                 r.routine_name      AS Name,
-                r.routine_schema    AS Schema,
+                r.routine_schema    AS SchemaName,
                 r.routine_definition AS Definition,
                 r.created           AS CreatedAt,
                 r.last_altered      AS ModifiedAt
@@ -152,7 +152,7 @@ public class PostgreSqlProvider : BaseDatabaseProvider
         return rows.Select(r => new ProcedureSchema
         {
             Name = r.name,
-            Schema = r.schema,
+            SchemaName = r.schemaname,
             Definition = r.definition,
             NormalizedDefinition = NormalizeDefinition(r.definition),
             CreatedAt = r.createdat,
@@ -167,7 +167,7 @@ public class PostgreSqlProvider : BaseDatabaseProvider
         const string sql = """
             SELECT
                 v.table_name        AS Name,
-                v.table_schema      AS Schema,
+                v.table_schema      AS SchemaName,
                 v.view_definition   AS Definition,
                 v.is_updatable      AS IsUpdatable
             FROM information_schema.views v
@@ -180,7 +180,7 @@ public class PostgreSqlProvider : BaseDatabaseProvider
         return rows.Select(r => new ViewSchema
         {
             Name = r.name,
-            Schema = r.schema,
+            SchemaName = r.schemaname,
             Definition = r.definition,
             NormalizedDefinition = NormalizeDefinition(r.definition),
             IsUpdatable = r.isupdatable == "YES"
@@ -194,7 +194,7 @@ public class PostgreSqlProvider : BaseDatabaseProvider
         const string sql = """
             SELECT
                 r.routine_name          AS Name,
-                r.routine_schema        AS Schema,
+                r.routine_schema        AS SchemaName,
                 r.routine_definition    AS Definition,
                 r.data_type             AS ReturnType,
                 r.routine_type          AS FunctionType,
@@ -211,7 +211,7 @@ public class PostgreSqlProvider : BaseDatabaseProvider
         return rows.Select(r => new FunctionSchema
         {
             Name = r.name,
-            Schema = r.schema,
+            SchemaName = r.schemaname,
             Definition = r.definition,
             NormalizedDefinition = NormalizeDefinition(r.definition),
             ReturnType = r.returntype,
@@ -228,7 +228,7 @@ public class PostgreSqlProvider : BaseDatabaseProvider
         const string sql = """
             SELECT
                 t.trigger_name          AS Name,
-                t.trigger_schema        AS Schema,
+                t.trigger_schema        AS SchemaName,
                 t.event_object_table    AS TableName,
                 t.event_manipulation    AS TriggerEvent,
                 t.action_timing         AS ActionTiming,
@@ -243,7 +243,7 @@ public class PostgreSqlProvider : BaseDatabaseProvider
         return rows.Select(r => new TriggerSchema
         {
             Name = r.name,
-            Schema = r.schema,
+            SchemaName = r.schemaname,
             TableName = r.tablename,
             TriggerEvent = r.triggerevent,
             ActionTiming = r.actiontiming,
@@ -260,7 +260,7 @@ public class PostgreSqlProvider : BaseDatabaseProvider
         const string sql = """
             SELECT
                 tc.constraint_name      AS Name,
-                tc.table_schema         AS Schema,
+                tc.table_schema         AS SchemaName,
                 tc.table_name           AS TableName,
                 tc.constraint_type      AS ConstraintType,
                 kcu.column_name         AS ColumnName,
@@ -286,7 +286,7 @@ public class PostgreSqlProvider : BaseDatabaseProvider
         return rows.Select(r => new ConstraintSchema
         {
             Name = r.name,
-            Schema = r.schema,
+            SchemaName = r.schemaname,
             TableName = r.tablename,
             ConstraintType = r.constrainttype,
             ColumnName = r.columnname,
@@ -303,7 +303,7 @@ public class PostgreSqlProvider : BaseDatabaseProvider
         const string sql = """
             SELECT
                 i.relname               AS Name,
-                n.nspname               AS Schema,
+                n.nspname               AS SchemaName,
                 t.relname               AS TableName,
                 am.amname               AS IndexType,
                 ix.indisunique          AS IsUnique,
@@ -330,7 +330,7 @@ public class PostgreSqlProvider : BaseDatabaseProvider
         return rows.Select(r => new IndexSchema
         {
             Name = r.name,
-            Schema = r.schema,
+            SchemaName = r.schemaname,
             TableName = r.tablename,
             IndexType = r.indextype,
             IsUnique = (bool)r.isunique,

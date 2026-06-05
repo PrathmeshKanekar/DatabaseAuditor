@@ -248,12 +248,18 @@ public class PdfReportGenerator : IReportService
                 col.Item().Padding(8).Column(info =>
                 {
                     EnvRow(info, "Compare Type", model.CompareType.ToString());
+                    EnvRow(info, "Scope", model.ComparisonScope.ToString());
                     EnvRow(info, "Started At", model.StartedAt.ToString("yyyy-MM-dd HH:mm:ss"));
                     EnvRow(info, "Completed At", model.CompletedAt.ToString("yyyy-MM-dd HH:mm:ss"));
                     EnvRow(info, "Status", model.IsSuccess ? "Success" : "Failed");
                 });
             });
         });
+
+        if (model.SelectedObjects.Count > 0)
+        {
+            container.PaddingTop(8).Text($"Selected Objects: {string.Join(", ", model.SelectedObjects)}").FontSize(8);
+        }
     }
 
     private static void EnvRow(ColumnDescriptor col, string label, string value)

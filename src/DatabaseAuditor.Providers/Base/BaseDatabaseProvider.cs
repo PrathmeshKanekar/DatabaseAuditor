@@ -57,6 +57,42 @@ public abstract class BaseDatabaseProvider : IDatabaseProvider
         return result.Trim().ToUpperInvariant();
     }
 
+    public virtual async Task<List<string>> GetTableNamesAsync(
+        ConnectionProfile connection,
+        CancellationToken cancellationToken = default)
+        => (await GetTablesAsync(connection, cancellationToken))
+            .Select(t => t.FullName)
+            .OrderBy(n => n)
+            .ToList();
+
+    public virtual async Task<List<string>> GetProcedureNamesAsync(
+        ConnectionProfile connection,
+        CancellationToken cancellationToken = default)
+        => (await GetProceduresAsync(connection, cancellationToken))
+            .Select(p => p.FullName)
+            .OrderBy(n => n)
+            .ToList();
+
+    public virtual async Task<TableSchema?> GetTableAsync(
+        ConnectionProfile connection,
+        string schemaName,
+        string tableName,
+        CancellationToken cancellationToken = default)
+        => (await GetTablesAsync(connection, cancellationToken))
+            .FirstOrDefault(t =>
+                string.Equals(t.SchemaName, schemaName, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(t.Name, tableName, StringComparison.OrdinalIgnoreCase));
+
+    public virtual async Task<ProcedureSchema?> GetProcedureAsync(
+        ConnectionProfile connection,
+        string schemaName,
+        string procedureName,
+        CancellationToken cancellationToken = default)
+        => (await GetProceduresAsync(connection, cancellationToken))
+            .FirstOrDefault(p =>
+                string.Equals(p.SchemaName, schemaName, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(p.Name, procedureName, StringComparison.OrdinalIgnoreCase));
+
     public abstract Task<bool> TestConnectionAsync(
         ConnectionProfile connection,
         CancellationToken cancellationToken = default);
