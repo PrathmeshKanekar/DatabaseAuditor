@@ -53,9 +53,9 @@ public class DatabaseObjectService
         {
             CompareType.Table => provider.GetTableNamesAsync(connection, cancellationToken),
             CompareType.Procedure => provider.GetProcedureNamesAsync(connection, cancellationToken),
-            CompareType.View => GetNamesFromObjectsAsync(provider.GetViewsAsync(connection, cancellationToken)),
-            CompareType.Function => GetNamesFromObjectsAsync(provider.GetFunctionsAsync(connection, cancellationToken)),
-            CompareType.Trigger => GetNamesFromObjectsAsync(provider.GetTriggersAsync(connection, cancellationToken)),
+            CompareType.View => GetNamesFromObjectsAsync(provider.GetViewsAsync(connection, null, cancellationToken)),
+            CompareType.Function => GetNamesFromObjectsAsync(provider.GetFunctionsAsync(connection, null, cancellationToken)),
+            CompareType.Trigger => GetNamesFromObjectsAsync(provider.GetTriggersAsync(connection, null, cancellationToken)),
             _ => Task.FromResult(new List<string>())
         };
 

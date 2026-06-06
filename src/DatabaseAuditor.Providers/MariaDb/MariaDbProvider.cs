@@ -1,9 +1,9 @@
-namespace DatabaseAuditor.Providers.MariaDb;
-
 using DatabaseAuditor.Domain.Entities;
 using DatabaseAuditor.Providers.MySql;
 using MySqlConnector;
 using System.Data;
+
+namespace DatabaseAuditor.Providers.MariaDb;
 
 public class MariaDbProvider : MySqlProvider
 {
@@ -53,10 +53,11 @@ public class MariaDbProvider : MySqlProvider
 
     public override async Task<List<TriggerSchema>> GetTriggersAsync(
         ConnectionProfile connection,
+        IReadOnlyCollection<string>? selectedTriggers = null,
         CancellationToken cancellationToken = default)
     {
         // MariaDB stores trigger info slightly differently — ACTION_ORDER column added
-        const string sql = """
+        var sql = """
             SELECT
                 t.TRIGGER_NAME          AS Name,
                 t.TRIGGER_SCHEMA        AS SchemaName,
@@ -68,11 +69,17 @@ public class MariaDbProvider : MySqlProvider
                 t.ACTION_ORDER          AS ActionOrder
             FROM information_schema.TRIGGERS t
             WHERE t.TRIGGER_SCHEMA = @DatabaseName
-            ORDER BY t.TRIGGER_SCHEMA, t.TRIGGER_NAME, t.ACTION_ORDER
             """;
 
+        if (selectedTriggers != null && selectedTriggers.Count > 0)
+        {
+            sql += " AND CONCAT(t.TRIGGER_SCHEMA, '.', t.TRIGGER_NAME) IN @SelectedTriggers";
+        }
+
+        sql += " ORDER BY t.TRIGGER_SCHEMA, t.TRIGGER_NAME, t.ACTION_ORDER";
+
         var rows = await QueryAsync<dynamic>(connection, sql,
-            new { DatabaseName = connection.DatabaseName },
+            new { DatabaseName = connection.DatabaseName, SelectedTriggers = selectedTriggers },
             cancellationToken);
 
         return rows.Select(r => new TriggerSchema

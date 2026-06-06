@@ -6,179 +6,183 @@
              xmlns:local="clr-namespace:DatabaseAuditor.WPF.Views"
              mc:Ignorable="d" 
              Padding="24"
-             d:DesignHeight="600" d:DesignWidth="900">
+             d:DesignHeight="700" d:DesignWidth="1000">
     <Grid>
         <!-- Main Workspace (When session is loaded) -->
-        <Grid Visibility="{Binding HasSession, Converter={StaticResource BoolToVisibilityConverter}}" VerticalAlignment="Top">
-            <Grid.RowDefinitions>
-                <!-- Title Header -->
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="16" />
-                <!-- Setup & Stats panels side-by-side -->
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="16" />
-                <!-- Actions & Output Links -->
-                <RowDefinition Height="Auto" />
-            </Grid.RowDefinitions>
+        <ScrollViewer Visibility="{Binding HasSession, Converter={StaticResource BoolToVisibilityConverter}}"
+                      VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled">
+            <Grid Margin="0,0,0,12">
+                <Grid.RowDefinitions>
+                    <!-- Title Header -->
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="16" />
+                    <!-- Setup & Stats panels side-by-side -->
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="16" />
+                    <!-- Actions & Output Links -->
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
 
-            <!-- Header -->
-            <StackPanel Grid.Row="0">
-                <TextBlock Text="Generate Schema Reports" Style="{DynamicResource TextHeading2}" FontWeight="Bold"/>
-                <TextBlock Text="{Binding SessionSummary}" Style="{DynamicResource TextBody}" Foreground="{DynamicResource AccentBrush}" Margin="0,4,0,0"/>
-            </StackPanel>
-
-            <!-- Grid options -->
-            <Grid Grid.Row="2">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="20" />
-                    <ColumnDefinition Width="*" />
-                </Grid.ColumnDefinitions>
-
-                <!-- Configuration Options -->
-                <Border Grid.Column="0" Style="{DynamicResource CardStyle}">
-                    <StackPanel>
-                        <TextBlock Text="Report Formats &amp; Outputs" Style="{DynamicResource SectionHeaderStyle}" Margin="0,0,0,12"/>
-                        
-                        <CheckBox IsChecked="{Binding ExportExcel}" Content="Export Excel Worksheet (.xlsx)" Style="{DynamicResource CheckBoxStyle}" Margin="0,0,0,4"/>
-                        <TextBlock Text="Detailed database schema audit spreadsheet, perfect for data analysis." Style="{DynamicResource TextCaption}" Margin="24,0,0,12"/>
-                        
-                        <CheckBox IsChecked="{Binding ExportPdf}" Content="Export PDF Summary (.pdf)" Style="{DynamicResource CheckBoxStyle}" Margin="0,0,0,4"/>
-                        <TextBlock Text="Polished document summarizing audit stats and changes." Style="{DynamicResource TextCaption}" Margin="24,0,0,16"/>
-
-                        <Separator Margin="0,0,0,16"/>
-
-                        <!-- Output Directory selection -->
-                        <StackPanel>
-                            <TextBlock Text="Output Folder Path" Style="{DynamicResource TextCaption}" FontWeight="SemiBold" Margin="0,0,0,8"/>
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="8" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <TextBox Grid.Column="0" Text="{Binding OutputDirectory}" Style="{DynamicResource TextBoxStyle}" Padding="10,6" IsReadOnly="True"/>
-                                <Button Grid.Column="2" Command="{Binding BrowseOutputDirectoryCommand}" Style="{DynamicResource ButtonStyle}" Content="Browse..." Padding="12,6"/>
-                            </Grid>
-                        </StackPanel>
-                    </StackPanel>
-                </Border>
-
-                <!-- Session Stats Summary -->
-                <Border Grid.Column="2" Style="{DynamicResource CardStyle}">
-                    <StackPanel>
-                        <TextBlock Text="Comparison Audit Summary" Style="{DynamicResource SectionHeaderStyle}" Margin="0,0,0,12"/>
-                        
-                        <Grid Margin="0,0,0,12">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="*" />
-                            </Grid.ColumnDefinitions>
-                            <StackPanel Grid.Column="0">
-                                <TextBlock Text="Source Profile" Style="{DynamicResource TextCaption}" Margin="0,0,0,4"/>
-                                <TextBlock Text="{Binding SourceInfo}" Style="{DynamicResource TextBody}" FontWeight="SemiBold"/>
-                            </StackPanel>
-                            <StackPanel Grid.Column="2">
-                                <TextBlock Text="Target Profile" Style="{DynamicResource TextCaption}" Margin="0,0,0,4"/>
-                                <TextBlock Text="{Binding TargetInfo}" Style="{DynamicResource TextBody}" FontWeight="SemiBold"/>
-                            </StackPanel>
-                        </Grid>
-
-                        <Separator Margin="0,0,0,12"/>
-
-                        <Grid Margin="0,0,0,12">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="*" />
-                            </Grid.ColumnDefinitions>
-                            <StackPanel Grid.Column="0">
-                                <TextBlock Text="Audit Scope" Style="{DynamicResource TextCaption}" Margin="0,0,0,4"/>
-                                <TextBlock Text="{Binding CompareType}" Style="{DynamicResource TextBody}" FontWeight="SemiBold"/>
-                            </StackPanel>
-                            <StackPanel Grid.Column="2">
-                                <TextBlock Text="Execution Time" Style="{DynamicResource TextCaption}" Margin="0,0,0,4"/>
-                                <TextBlock Text="{Binding ExecutionTime}" Style="{DynamicResource TextBody}" FontWeight="SemiBold"/>
-                            </StackPanel>
-                        </Grid>
-
-                        <Grid Margin="0,0,0,12">
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="Auto" />
-                            </Grid.RowDefinitions>
-                            <TextBlock Grid.Row="0" Text="{Binding ComparisonScope, StringFormat='Comparison Scope: \{0\}'}" Style="{DynamicResource TextCaption}" Margin="0,0,0,4"/>
-                            <TextBlock Grid.Row="1" Text="{Binding SelectedObjectsSummary, StringFormat='Selected Objects: \{0\}'}" Style="{DynamicResource TextCaption}" TextWrapping="Wrap"/>
-                        </Grid>
-
-                        <Separator Margin="0,0,0,12"/>
-
-                        <Grid Margin="0,0,0,12">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="Total Objects Compared: " Style="{DynamicResource TextCaption}"/>
-                            <TextBlock Grid.Column="1" Text="{Binding TotalObjects}" Style="{DynamicResource TextBody}" FontWeight="SemiBold"/>
-                        </Grid>
-
-                        <!-- Change badges -->
-                        <WrapPanel Orientation="Horizontal" Margin="0,4,0,0">
-                            <Border Background="{DynamicResource AddedBgBrush}" CornerRadius="{DynamicResource RadiusSM}" Padding="8,4" Margin="0,0,8,0">
-                                <TextBlock Text="{Binding AddedCount, StringFormat='Added: \{0\}'}" Foreground="{DynamicResource AddedBrush}" FontWeight="SemiBold" FontSize="11"/>
-                            </Border>
-                            <Border Background="{DynamicResource DeletedBgBrush}" CornerRadius="{DynamicResource RadiusSM}" Padding="8,4" Margin="0,0,8,0">
-                                <TextBlock Text="{Binding DeletedCount, StringFormat='Deleted: \{0\}'}" Foreground="{DynamicResource DeletedBrush}" FontWeight="SemiBold" FontSize="11"/>
-                            </Border>
-                            <Border Background="{DynamicResource ModifiedBgBrush}" CornerRadius="{DynamicResource RadiusSM}" Padding="8,4">
-                                <TextBlock Text="{Binding ModifiedCount, StringFormat='Modified: \{0\}'}" Foreground="{DynamicResource ModifiedBrush}" FontWeight="SemiBold" FontSize="11"/>
-                            </Border>
-                        </WrapPanel>
-                    </StackPanel>
-                </Border>
-            </Grid>
-
-            <!-- Actions and outputs -->
-            <StackPanel Grid.Row="4">
-                <!-- Progress bar -->
-                <StackPanel Visibility="{Binding IsGenerating, Converter={StaticResource BoolToVisibilityConverter}}" Margin="0,16,0,0">
-                    <TextBlock Text="{Binding ProgressMessage}" Style="{DynamicResource TextCaption}" Margin="0,0,0,8"/>
-                    <ProgressBar Value="{Binding ProgressValue}" Height="10" Background="{DynamicResource SurfaceBrush}" BorderThickness="0"/>
+                <!-- Header -->
+                <StackPanel Grid.Row="0">
+                    <TextBlock Text="Generate Schema Reports" Style="{DynamicResource TextHeading2}" FontWeight="Bold"/>
+                    <TextBlock Text="{Binding SessionSummary}" Style="{DynamicResource TextBody}" Foreground="{DynamicResource AccentBrush}" Margin="0,4,0,0"/>
                 </StackPanel>
 
-                <!-- Feedback alerts -->
-                <Border Background="#20FF0000" BorderBrush="#80FF0000" BorderThickness="1" CornerRadius="{DynamicResource RadiusMD}" Padding="16" Margin="0,16,0,0"
-                        Visibility="{Binding HasError, Converter={StaticResource BoolToVisibilityConverter}}">
-                    <TextBlock Text="{Binding ErrorMessage}" Style="{DynamicResource TextBody}" Foreground="{DynamicResource DeletedBrush}"/>
-                </Border>
+                <!-- Grid options -->
+                <Grid Grid.Row="2">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="20" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
 
-                <Border Background="#2000FF00" BorderBrush="#8000FF00" BorderThickness="1" CornerRadius="{DynamicResource RadiusMD}" Padding="16" Margin="0,16,0,0"
-                        Visibility="{Binding StatusMessage, Converter={StaticResource NullToVisibilityConverter}}">
-                    <TextBlock Text="{Binding StatusMessage}" Style="{DynamicResource TextBody}" Foreground="{DynamicResource UnchangedBrush}"/>
-                </Border>
+                    <!-- Configuration Options -->
+                    <Border Grid.Column="0" Style="{DynamicResource CardStyle}">
+                        <StackPanel>
+                            <TextBlock Text="Report Formats &amp; Outputs" Style="{DynamicResource SectionHeaderStyle}" Margin="0,0,0,12"/>
+                            
+                            <CheckBox IsChecked="{Binding ExportExcel}" Content="Export Excel Worksheet (.xlsx)" Style="{DynamicResource CheckBoxStyle}" Margin="0,0,0,4"/>
+                            <TextBlock Text="Detailed database schema audit spreadsheet, perfect for data analysis." Style="{DynamicResource TextCaption}" Margin="24,0,0,12"/>
+                            
+                            <CheckBox IsChecked="{Binding ExportPdf}" Content="Export PDF Summary (.pdf)" Style="{DynamicResource CheckBoxStyle}" Margin="0,0,0,4"/>
+                            <TextBlock Text="Polished document summarizing audit stats and changes." Style="{DynamicResource TextCaption}" Margin="24,0,0,16"/>
 
-                <!-- Actions Grid -->
-                <Border Style="{DynamicResource CardStyle}" Margin="0,16,0,0">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        
-                        <!-- Open output links -->
-                        <StackPanel Grid.Column="0" Orientation="Horizontal">
-                            <Button Command="{Binding OpenExcelReportCommand}" Style="{DynamicResource ButtonStyle}" Content="Open Excel File" IsEnabled="{Binding HasExcelOutput}" Margin="0,0,8,0"/>
-                            <Button Command="{Binding OpenPdfReportCommand}" Style="{DynamicResource ButtonStyle}" Content="Open PDF File" IsEnabled="{Binding HasPdfOutput}" Margin="0,0,8,0"/>
-                            <Button Command="{Binding OpenOutputDirectoryCommand}" Style="{DynamicResource ButtonStyle}" Content="Open Folder"/>
+                            <Separator Margin="0,0,0,16"/>
+
+                            <!-- Output Directory selection -->
+                            <StackPanel>
+                                <TextBlock Text="Output Folder Path" Style="{DynamicResource TextCaption}" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="8" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBox Grid.Column="0" Text="{Binding OutputDirectory}" Style="{DynamicResource TextBoxStyle}" Padding="10,6" IsReadOnly="True"/>
+                                    <Button Grid.Column="2" Command="{Binding BrowseOutputDirectoryCommand}" Style="{DynamicResource ButtonStyle}" Content="Browse..." Padding="12,6"/>
+                                </Grid>
+                            </StackPanel>
                         </StackPanel>
+                    </Border>
 
-                        <!-- Generate button -->
-                        <Button Grid.Column="2" Command="{Binding GenerateReportsCommand}" Style="{DynamicResource ButtonStyle}" Content="Generate Reports" Background="{DynamicResource AccentBrush}" Foreground="White" Width="160" Height="36"
-                                Visibility="{Binding IsGenerating, Converter={StaticResource InverseBoolToVisibilityConverter}}"/>
-                    </Grid>
-                </Border>
-            </StackPanel>
-        </Grid>
+                    <!-- Session Stats Summary -->
+                    <Border Grid.Column="2" Style="{DynamicResource CardStyle}">
+                        <StackPanel>
+                            <TextBlock Text="Comparison Audit Summary" Style="{DynamicResource SectionHeaderStyle}" Margin="0,0,0,12"/>
+                            
+                            <Grid Margin="0,0,0,12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="Source Profile" Style="{DynamicResource TextCaption}" Margin="0,0,0,4"/>
+                                    <TextBlock Text="{Binding SourceInfo}" Style="{DynamicResource TextBody}" FontWeight="SemiBold"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="2">
+                                    <TextBlock Text="Target Profile" Style="{DynamicResource TextCaption}" Margin="0,0,0,4"/>
+                                    <TextBlock Text="{Binding TargetInfo}" Style="{DynamicResource TextBody}" FontWeight="SemiBold"/>
+                                </StackPanel>
+                            </Grid>
+
+                            <Separator Margin="0,0,0,12"/>
+
+                            <Grid Margin="0,0,0,12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="Audit Scope" Style="{DynamicResource TextCaption}" Margin="0,0,0,4"/>
+                                    <TextBlock Text="{Binding CompareType}" Style="{DynamicResource TextBody}" FontWeight="SemiBold"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="2">
+                                    <TextBlock Text="Execution Time" Style="{DynamicResource TextCaption}" Margin="0,0,0,4"/>
+                                    <TextBlock Text="{Binding ExecutionTime}" Style="{DynamicResource TextBody}" FontWeight="SemiBold"/>
+                                </StackPanel>
+                            </Grid>
+
+                            <Grid Margin="0,0,0,12">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <TextBlock Grid.Row="0" Text="{Binding ComparisonScope, StringFormat='Comparison Scope: \{0\}'}" Style="{DynamicResource TextCaption}" Margin="0,0,0,4"/>
+                                <TextBlock Grid.Row="1" Text="{Binding SelectedObjectsSummary, StringFormat='Selected Objects: \{0\}'}" Style="{DynamicResource TextCaption}" TextWrapping="Wrap"/>
+                            </Grid>
+
+                            <Separator Margin="0,0,0,12"/>
+
+                            <Grid Margin="0,0,0,12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="Total Objects Compared: " Style="{DynamicResource TextCaption}"/>
+                                <TextBlock Grid.Column="1" Text="{Binding TotalObjects}" Style="{DynamicResource TextBody}" FontWeight="SemiBold"/>
+                            </Grid>
+
+                            <!-- Change badges -->
+                            <WrapPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                <Border Background="{DynamicResource AddedBgBrush}" CornerRadius="{DynamicResource RadiusSM}" Padding="8,4" Margin="0,0,8,0">
+                                    <TextBlock Text="{Binding AddedCount, StringFormat='Added: \{0\}'}" Foreground="{DynamicResource AddedBrush}" FontWeight="SemiBold" FontSize="11"/>
+                                </Border>
+                                <Border Background="{DynamicResource DeletedBgBrush}" CornerRadius="{DynamicResource RadiusSM}" Padding="8,4" Margin="0,0,8,0">
+                                    <TextBlock Text="{Binding DeletedCount, StringFormat='Deleted: \{0\}'}" Foreground="{DynamicResource DeletedBrush}" FontWeight="SemiBold" FontSize="11"/>
+                                </Border>
+                                <Border Background="{DynamicResource ModifiedBgBrush}" CornerRadius="{DynamicResource RadiusSM}" Padding="8,4">
+                                    <TextBlock Text="{Binding ModifiedCount, StringFormat='Modified: \{0\}'}" Foreground="{DynamicResource ModifiedBrush}" FontWeight="SemiBold" FontSize="11"/>
+                                </Border>
+                            </WrapPanel>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+
+                <!-- Actions and outputs -->
+                <StackPanel Grid.Row="4">
+                    <!-- Progress bar -->
+                    <StackPanel Visibility="{Binding IsGenerating, Converter={StaticResource BoolToVisibilityConverter}}" Margin="0,16,0,0">
+                        <TextBlock Text="{Binding ProgressMessage}" Style="{DynamicResource TextCaption}" Margin="0,0,0,8"/>
+                        <ProgressBar Value="{Binding ProgressValue}" Height="10" Background="{DynamicResource SurfaceBrush}" BorderThickness="0"/>
+                    </StackPanel>
+
+                    <!-- Feedback alerts -->
+                    <Border Background="#20FF0000" BorderBrush="#80FF0000" BorderThickness="1" CornerRadius="{DynamicResource RadiusMD}" Padding="16" Margin="0,16,0,0"
+                            Visibility="{Binding HasError, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <TextBlock Text="{Binding ErrorMessage}" Style="{DynamicResource TextBody}" Foreground="{DynamicResource DeletedBrush}"/>
+                    </Border>
+
+                    <Border Background="#2000FF00" BorderBrush="#8000FF00" BorderThickness="1" CornerRadius="{DynamicResource RadiusMD}" Padding="16" Margin="0,16,0,0"
+                            Visibility="{Binding StatusMessage, Converter={StaticResource NullToVisibilityConverter}}">
+                        <TextBlock Text="{Binding StatusMessage}" Style="{DynamicResource TextBody}" Foreground="{DynamicResource UnchangedBrush}"/>
+                    </Border>
+
+                    <!-- Actions Grid -->
+                    <Border Style="{DynamicResource CardStyle}" Margin="0,16,0,0">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            
+                            <!-- Open output links -->
+                            <StackPanel Grid.Column="0" Orientation="Horizontal">
+                                <Button Command="{Binding OpenExcelReportCommand}" Style="{DynamicResource ButtonStyle}" Content="Open Excel File" IsEnabled="{Binding HasExcelOutput}" Margin="0,0,8,0"/>
+                                <Button Command="{Binding OpenPdfReportCommand}" Style="{DynamicResource ButtonStyle}" Content="Open PDF File" IsEnabled="{Binding HasPdfOutput}" Margin="0,0,8,0"/>
+                                <Button Command="{Binding OpenOutputDirectoryCommand}" Style="{DynamicResource ButtonStyle}" Content="Open Folder"/>
+                            </StackPanel>
+
+                            <!-- Generate button -->
+                            <Button Grid.Column="2" Command="{Binding GenerateReportsCommand}" Style="{DynamicResource ButtonStyle}" Content="Generate Reports" Background="{DynamicResource AccentBrush}" Foreground="White" Width="160" Height="36"
+                                    Visibility="{Binding IsGenerating, Converter={StaticResource InverseBoolToVisibilityConverter}}"/>
+                        </Grid>
+                    </Border>
+                </StackPanel>
+            </Grid>
+        </ScrollViewer>
 
         <!-- No Session loaded state -->
         <Grid Visibility="{Binding HasSession, Converter={StaticResource InverseBoolToVisibilityConverter}}">

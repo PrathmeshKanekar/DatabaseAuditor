@@ -1,9 +1,9 @@
-namespace DatabaseAuditor.Providers.MySql;
-
 using DatabaseAuditor.Domain.Entities;
 using DatabaseAuditor.Providers.Base;
 using MySqlConnector;
 using System.Data;
+
+namespace DatabaseAuditor.Providers.MySql;
 
 public class MySqlProvider : BaseDatabaseProvider
 {
@@ -12,7 +12,6 @@ public class MySqlProvider : BaseDatabaseProvider
         var builder = new MySqlConnectionStringBuilder
         {
             Server = connection.Server,
-            Port = (uint)connection.Port,
             Database = connection.DatabaseName,
             UserID = connection.Username,
             Password = connection.Password,
@@ -20,6 +19,10 @@ public class MySqlProvider : BaseDatabaseProvider
             AllowZeroDateTime = true,
             ConvertZeroDateTime = true
         };
+        if (connection.Port > 0)
+        {
+            builder.Port = (uint)connection.Port;
+        }
         return new MySqlConnection(builder.ConnectionString);
     }
 
@@ -41,9 +44,10 @@ public class MySqlProvider : BaseDatabaseProvider
 
     public override async Task<List<TableSchema>> GetTablesAsync(
         ConnectionProfile connection,
+        IReadOnlyCollection<string>? selectedTables = null,
         CancellationToken cancellationToken = default)
     {
-        const string sql = """
+        var sql = """
             SELECT
                 t.TABLE_NAME        AS Name,
                 t.TABLE_SCHEMA      AS SchemaName,
@@ -53,11 +57,17 @@ public class MySqlProvider : BaseDatabaseProvider
             FROM information_schema.TABLES t
             WHERE t.TABLE_TYPE = 'BASE TABLE'
               AND t.TABLE_SCHEMA = @DatabaseName
-            ORDER BY t.TABLE_SCHEMA, t.TABLE_NAME
             """;
 
+        if (selectedTables != null && selectedTables.Count > 0)
+        {
+            sql += " AND CONCAT(t.TABLE_SCHEMA, '.', t.TABLE_NAME) IN @SelectedTables ";
+        }
+
+        sql += " ORDER BY t.TABLE_SCHEMA, t.TABLE_NAME";
+
         var rows = await QueryAsync<dynamic>(connection, sql,
-            new { DatabaseName = connection.DatabaseName },
+            new { DatabaseName = connection.DatabaseName, SelectedTables = selectedTables },
             cancellationToken);
 
         return rows.Select(r => new TableSchema
@@ -72,9 +82,10 @@ public class MySqlProvider : BaseDatabaseProvider
 
     public override async Task<List<ColumnSchema>> GetColumnsAsync(
         ConnectionProfile connection,
+        IReadOnlyCollection<string>? selectedTables = null,
         CancellationToken cancellationToken = default)
     {
-        const string sql = """
+        var sql = """
             SELECT
                 c.COLUMN_NAME           AS Name,
                 c.TABLE_SCHEMA          AS SchemaName,
@@ -94,11 +105,17 @@ public class MySqlProvider : BaseDatabaseProvider
                 CASE WHEN c.COLUMN_KEY = 'MUL' THEN 1 ELSE 0 END AS IsForeignKey
             FROM information_schema.COLUMNS c
             WHERE c.TABLE_SCHEMA = @DatabaseName
-            ORDER BY c.TABLE_SCHEMA, c.TABLE_NAME, c.ORDINAL_POSITION
             """;
 
+        if (selectedTables != null && selectedTables.Count > 0)
+        {
+            sql += " AND CONCAT(c.TABLE_SCHEMA, '.', c.TABLE_NAME) IN @SelectedTables ";
+        }
+
+        sql += " ORDER BY c.TABLE_SCHEMA, c.TABLE_NAME, c.ORDINAL_POSITION";
+
         var rows = await QueryAsync<dynamic>(connection, sql,
-            new { DatabaseName = connection.DatabaseName },
+            new { DatabaseName = connection.DatabaseName, SelectedTables = selectedTables },
             cancellationToken);
 
         return rows.Select(r => new ColumnSchema
@@ -123,9 +140,10 @@ public class MySqlProvider : BaseDatabaseProvider
 
     public override async Task<List<ProcedureSchema>> GetProceduresAsync(
         ConnectionProfile connection,
+        IReadOnlyCollection<string>? selectedProcedures = null,
         CancellationToken cancellationToken = default)
     {
-        const string sql = """
+        var sql = """
             SELECT
                 r.ROUTINE_NAME          AS Name,
                 r.ROUTINE_SCHEMA        AS SchemaName,
@@ -135,14 +153,20 @@ public class MySqlProvider : BaseDatabaseProvider
             FROM information_schema.ROUTINES r
             WHERE r.ROUTINE_TYPE = 'PROCEDURE'
               AND r.ROUTINE_SCHEMA = @DatabaseName
-            ORDER BY r.ROUTINE_SCHEMA, r.ROUTINE_NAME
             """;
 
+        if (selectedProcedures != null && selectedProcedures.Count > 0)
+        {
+            sql += " AND CONCAT(r.ROUTINE_SCHEMA, '.', r.ROUTINE_NAME) IN @SelectedProcedures ";
+        }
+
+        sql += " ORDER BY r.ROUTINE_SCHEMA, r.ROUTINE_NAME";
+
         var rows = await QueryAsync<dynamic>(connection, sql,
-            new { DatabaseName = connection.DatabaseName },
+            new { DatabaseName = connection.DatabaseName, SelectedProcedures = selectedProcedures },
             cancellationToken);
 
-        return rows.Select(r => new ProcedureSchema
+        var procedures = rows.Select(r => new ProcedureSchema
         {
             Name = r.Name,
             SchemaName = r.SchemaName,
@@ -151,13 +175,57 @@ public class MySqlProvider : BaseDatabaseProvider
             CreatedAt = r.CreatedAt,
             ModifiedAt = r.ModifiedAt
         }).ToList();
+
+        // Load parameters
+        var paramSql = """
+            SELECT
+                p.SPECIFIC_NAME AS RoutineName,
+                p.ROUTINE_SCHEMA AS RoutineSchema,
+                p.PARAMETER_NAME AS Name,
+                p.DATA_TYPE AS DataType,
+                p.CHARACTER_MAXIMUM_LENGTH AS MaxLength,
+                p.ORDINAL_POSITION AS OrdinalPosition,
+                p.PARAMETER_MODE AS ParameterMode
+            FROM information_schema.PARAMETERS p
+            WHERE p.ROUTINE_TYPE = 'PROCEDURE'
+              AND p.ROUTINE_SCHEMA = @DatabaseName
+            """;
+
+        if (selectedProcedures != null && selectedProcedures.Count > 0)
+        {
+            paramSql += " AND CONCAT(p.ROUTINE_SCHEMA, '.', p.SPECIFIC_NAME) IN @SelectedProcedures ";
+        }
+
+        var paramRows = await QueryAsync<dynamic>(connection, paramSql,
+            new { DatabaseName = connection.DatabaseName, SelectedProcedures = selectedProcedures },
+            cancellationToken);
+
+        var paramMap = paramRows.GroupBy(p => $"{p.RoutineSchema}.{p.RoutineName}", StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.ToList(), StringComparer.OrdinalIgnoreCase);
+
+        foreach (var proc in procedures)
+        {
+            if (paramMap.TryGetValue(proc.FullName, out var paramsList))
+            {
+                proc.Parameters = paramsList.Select(p => new ParameterSchema
+                {
+                    Name = p.Name ?? string.Empty,
+                    DataType = p.MaxLength != null && p.MaxLength > 0 ? $"{p.DataType}({p.MaxLength})" : (string)p.DataType,
+                    OrdinalPosition = p.OrdinalPosition,
+                    IsOutput = p.ParameterMode == "INOUT" || p.ParameterMode == "OUT"
+                }).OrderBy(p => p.OrdinalPosition).ToList();
+            }
+        }
+
+        return procedures;
     }
 
     public override async Task<List<ViewSchema>> GetViewsAsync(
         ConnectionProfile connection,
+        IReadOnlyCollection<string>? selectedViews = null,
         CancellationToken cancellationToken = default)
     {
-        const string sql = """
+        var sql = """
             SELECT
                 v.TABLE_NAME            AS Name,
                 v.TABLE_SCHEMA          AS SchemaName,
@@ -165,11 +233,17 @@ public class MySqlProvider : BaseDatabaseProvider
                 v.IS_UPDATABLE          AS IsUpdatable
             FROM information_schema.VIEWS v
             WHERE v.TABLE_SCHEMA = @DatabaseName
-            ORDER BY v.TABLE_SCHEMA, v.TABLE_NAME
             """;
 
+        if (selectedViews != null && selectedViews.Count > 0)
+        {
+            sql += " AND CONCAT(v.TABLE_SCHEMA, '.', v.TABLE_NAME) IN @SelectedViews ";
+        }
+
+        sql += " ORDER BY v.TABLE_SCHEMA, v.TABLE_NAME";
+
         var rows = await QueryAsync<dynamic>(connection, sql,
-            new { DatabaseName = connection.DatabaseName },
+            new { DatabaseName = connection.DatabaseName, SelectedViews = selectedViews },
             cancellationToken);
 
         return rows.Select(r => new ViewSchema
@@ -184,9 +258,10 @@ public class MySqlProvider : BaseDatabaseProvider
 
     public override async Task<List<FunctionSchema>> GetFunctionsAsync(
         ConnectionProfile connection,
+        IReadOnlyCollection<string>? selectedFunctions = null,
         CancellationToken cancellationToken = default)
     {
-        const string sql = """
+        var sql = """
             SELECT
                 r.ROUTINE_NAME          AS Name,
                 r.ROUTINE_SCHEMA        AS SchemaName,
@@ -198,11 +273,17 @@ public class MySqlProvider : BaseDatabaseProvider
             FROM information_schema.ROUTINES r
             WHERE r.ROUTINE_TYPE = 'FUNCTION'
               AND r.ROUTINE_SCHEMA = @DatabaseName
-            ORDER BY r.ROUTINE_SCHEMA, r.ROUTINE_NAME
             """;
 
+        if (selectedFunctions != null && selectedFunctions.Count > 0)
+        {
+            sql += " AND CONCAT(r.ROUTINE_SCHEMA, '.', r.ROUTINE_NAME) IN @SelectedFunctions ";
+        }
+
+        sql += " ORDER BY r.ROUTINE_SCHEMA, r.ROUTINE_NAME";
+
         var rows = await QueryAsync<dynamic>(connection, sql,
-            new { DatabaseName = connection.DatabaseName },
+            new { DatabaseName = connection.DatabaseName, SelectedFunctions = selectedFunctions },
             cancellationToken);
 
         return rows.Select(r => new FunctionSchema
@@ -220,9 +301,10 @@ public class MySqlProvider : BaseDatabaseProvider
 
     public override async Task<List<TriggerSchema>> GetTriggersAsync(
         ConnectionProfile connection,
+        IReadOnlyCollection<string>? selectedTriggers = null,
         CancellationToken cancellationToken = default)
     {
-        const string sql = """
+        var sql = """
             SELECT
                 t.TRIGGER_NAME          AS Name,
                 t.TRIGGER_SCHEMA        AS SchemaName,
@@ -233,11 +315,17 @@ public class MySqlProvider : BaseDatabaseProvider
                 t.CREATED               AS CreatedAt
             FROM information_schema.TRIGGERS t
             WHERE t.TRIGGER_SCHEMA = @DatabaseName
-            ORDER BY t.TRIGGER_SCHEMA, t.TRIGGER_NAME
             """;
 
+        if (selectedTriggers != null && selectedTriggers.Count > 0)
+        {
+            sql += " AND CONCAT(t.TRIGGER_SCHEMA, '.', t.TRIGGER_NAME) IN @SelectedTriggers ";
+        }
+
+        sql += " ORDER BY t.TRIGGER_SCHEMA, t.TRIGGER_NAME";
+
         var rows = await QueryAsync<dynamic>(connection, sql,
-            new { DatabaseName = connection.DatabaseName },
+            new { DatabaseName = connection.DatabaseName, SelectedTriggers = selectedTriggers },
             cancellationToken);
 
         return rows.Select(r => new TriggerSchema
@@ -256,9 +344,10 @@ public class MySqlProvider : BaseDatabaseProvider
 
     public override async Task<List<ConstraintSchema>> GetConstraintsAsync(
         ConnectionProfile connection,
+        IReadOnlyCollection<string>? selectedTables = null,
         CancellationToken cancellationToken = default)
     {
-        const string sql = """
+        var sql = """
             SELECT
                 tc.CONSTRAINT_NAME      AS Name,
                 tc.TABLE_SCHEMA         AS SchemaName,
@@ -277,31 +366,47 @@ public class MySqlProvider : BaseDatabaseProvider
                 ON cc.CONSTRAINT_NAME = tc.CONSTRAINT_NAME
                 AND cc.CONSTRAINT_SCHEMA = tc.TABLE_SCHEMA
             WHERE tc.TABLE_SCHEMA = @DatabaseName
-            ORDER BY tc.TABLE_SCHEMA, tc.TABLE_NAME, tc.CONSTRAINT_NAME
             """;
 
+        if (selectedTables != null && selectedTables.Count > 0)
+        {
+            sql += " AND CONCAT(tc.TABLE_SCHEMA, '.', tc.TABLE_NAME) IN @SelectedTables ";
+        }
+
+        sql += " ORDER BY tc.TABLE_SCHEMA, tc.TABLE_NAME, tc.CONSTRAINT_NAME";
+
         var rows = await QueryAsync<dynamic>(connection, sql,
-            new { DatabaseName = connection.DatabaseName },
+            new { DatabaseName = connection.DatabaseName, SelectedTables = selectedTables },
             cancellationToken);
 
-        return rows.Select(r => new ConstraintSchema
+        var grouped = rows.GroupBy(r => new { Name = (string)r.Name, SchemaName = (string)r.SchemaName, TableName = (string)r.TableName });
+
+        return grouped.Select(g =>
         {
-            Name = r.Name,
-            SchemaName = r.SchemaName,
-            TableName = r.TableName,
-            ConstraintType = r.ConstraintType,
-            ColumnName = r.ColumnName,
-            ReferencedTable = r.ReferencedTable,
-            ReferencedColumn = r.ReferencedColumn,
-            CheckClause = r.CheckClause
+            var first = g.First();
+            var columnNames = string.Join(",", g.Select(x => (string)x.ColumnName).Where(c => !string.IsNullOrEmpty(c)));
+            var referencedColumns = string.Join(",", g.Select(x => (string)x.ReferencedColumn).Where(c => !string.IsNullOrEmpty(c)));
+
+            return new ConstraintSchema
+            {
+                Name = first.Name,
+                SchemaName = first.SchemaName,
+                TableName = first.TableName,
+                ConstraintType = first.ConstraintType,
+                ColumnName = string.IsNullOrEmpty(columnNames) ? null : columnNames,
+                ReferencedTable = first.ReferencedTable,
+                ReferencedColumn = string.IsNullOrEmpty(referencedColumns) ? null : referencedColumns,
+                CheckClause = first.CheckClause
+            };
         }).ToList();
     }
 
     public override async Task<List<IndexSchema>> GetIndexesAsync(
         ConnectionProfile connection,
+        IReadOnlyCollection<string>? selectedTables = null,
         CancellationToken cancellationToken = default)
     {
-        const string sql = """
+        var sql = """
             SELECT
                 s.INDEX_NAME            AS Name,
                 s.TABLE_SCHEMA          AS SchemaName,
@@ -314,13 +419,21 @@ public class MySqlProvider : BaseDatabaseProvider
                 GROUP_CONCAT(s.COLUMN_NAME ORDER BY s.SEQ_IN_INDEX) AS Columns
             FROM information_schema.STATISTICS s
             WHERE s.TABLE_SCHEMA = @DatabaseName
+            """;
+
+        if (selectedTables != null && selectedTables.Count > 0)
+        {
+            sql += " AND CONCAT(s.TABLE_SCHEMA, '.', s.TABLE_NAME) IN @SelectedTables ";
+        }
+
+        sql += """
             GROUP BY s.INDEX_NAME, s.TABLE_SCHEMA, s.TABLE_NAME,
                      s.INDEX_TYPE, s.NON_UNIQUE
             ORDER BY s.TABLE_SCHEMA, s.TABLE_NAME, s.INDEX_NAME
             """;
 
         var rows = await QueryAsync<dynamic>(connection, sql,
-            new { DatabaseName = connection.DatabaseName },
+            new { DatabaseName = connection.DatabaseName, SelectedTables = selectedTables },
             cancellationToken);
 
         return rows.Select(r => new IndexSchema

@@ -1,9 +1,9 @@
-namespace DatabaseAuditor.Providers.PostgreSql;
-
 using DatabaseAuditor.Domain.Entities;
 using DatabaseAuditor.Providers.Base;
 using Npgsql;
 using System.Data;
+
+namespace DatabaseAuditor.Providers.PostgreSql;
 
 public class PostgreSqlProvider : BaseDatabaseProvider
 {
@@ -12,13 +12,16 @@ public class PostgreSqlProvider : BaseDatabaseProvider
         var builder = new NpgsqlConnectionStringBuilder
         {
             Host = connection.Server,
-            Port = connection.Port,
             Database = connection.DatabaseName,
             Username = connection.Username,
             Password = connection.Password,
             Timeout = 30,
             CommandTimeout = 120
         };
+        if (connection.Port > 0)
+        {
+            builder.Port = connection.Port;
+        }
         return new NpgsqlConnection(builder.ConnectionString);
     }
 
@@ -40,9 +43,10 @@ public class PostgreSqlProvider : BaseDatabaseProvider
 
     public override async Task<List<TableSchema>> GetTablesAsync(
         ConnectionProfile connection,
+        IReadOnlyCollection<string>? selectedTables = null,
         CancellationToken cancellationToken = default)
     {
-        const string sql = """
+        var sql = """
             SELECT
                 t.table_name        AS Name,
                 t.table_schema      AS SchemaName,
@@ -53,10 +57,16 @@ public class PostgreSqlProvider : BaseDatabaseProvider
                 AND pg_stat_user_tables.schemaname = t.table_schema
             WHERE t.table_type = 'BASE TABLE'
               AND t.table_schema NOT IN ('pg_catalog','information_schema')
-            ORDER BY t.table_schema, t.table_name
             """;
 
-        var rows = await QueryAsync<dynamic>(connection, sql, cancellationToken: cancellationToken);
+        if (selectedTables != null && selectedTables.Count > 0)
+        {
+            sql += " AND (t.table_schema || '.' || t.table_name) IN @SelectedTables ";
+        }
+
+        sql += " ORDER BY t.table_schema, t.table_name";
+
+        var rows = await QueryAsync<dynamic>(connection, sql, new { SelectedTables = selectedTables }, cancellationToken);
 
         return rows.Select(r => new TableSchema
         {
@@ -68,9 +78,10 @@ public class PostgreSqlProvider : BaseDatabaseProvider
 
     public override async Task<List<ColumnSchema>> GetColumnsAsync(
         ConnectionProfile connection,
+        IReadOnlyCollection<string>? selectedTables = null,
         CancellationToken cancellationToken = default)
     {
-        const string sql = """
+        var sql = """
             SELECT
                 c.column_name           AS Name,
                 c.table_schema          AS SchemaName,
@@ -106,10 +117,16 @@ public class PostgreSqlProvider : BaseDatabaseProvider
                 AND fk.column_name = c.column_name
                 AND fk.table_schema = c.table_schema
             WHERE c.table_schema NOT IN ('pg_catalog','information_schema')
-            ORDER BY c.table_schema, c.table_name, c.ordinal_position
             """;
 
-        var rows = await QueryAsync<dynamic>(connection, sql, cancellationToken: cancellationToken);
+        if (selectedTables != null && selectedTables.Count > 0)
+        {
+            sql += " AND (c.table_schema || '.' || c.table_name) IN @SelectedTables ";
+        }
+
+        sql += " ORDER BY c.table_schema, c.table_name, c.ordinal_position";
+
+        var rows = await QueryAsync<dynamic>(connection, sql, new { SelectedTables = selectedTables }, cancellationToken);
 
         return rows.Select(r => new ColumnSchema
         {
@@ -132,9 +149,10 @@ public class PostgreSqlProvider : BaseDatabaseProvider
 
     public override async Task<List<ProcedureSchema>> GetProceduresAsync(
         ConnectionProfile connection,
+        IReadOnlyCollection<string>? selectedProcedures = null,
         CancellationToken cancellationToken = default)
     {
-        const string sql = """
+        var sql = """
             SELECT
                 r.routine_name      AS Name,
                 r.routine_schema    AS SchemaName,
@@ -144,12 +162,17 @@ public class PostgreSqlProvider : BaseDatabaseProvider
             FROM information_schema.routines r
             WHERE r.routine_type = 'PROCEDURE'
               AND r.routine_schema NOT IN ('pg_catalog','information_schema')
-            ORDER BY r.routine_schema, r.routine_name
             """;
 
-        var rows = await QueryAsync<dynamic>(connection, sql, cancellationToken: cancellationToken);
+        if (selectedProcedures != null && selectedProcedures.Count > 0)
+        {
+            sql += " AND (r.routine_schema || '.' || r.routine_name) IN @SelectedProcedures ";
+        }
 
-        return rows.Select(r => new ProcedureSchema
+        sql += " ORDER BY r.routine_schema, r.routine_name";
+
+        var rows = await QueryAsync<dynamic>(connection, sql, new { SelectedProcedures = selectedProcedures }, cancellationToken);
+        var procedures = rows.Select(r => new ProcedureSchema
         {
             Name = r.name,
             SchemaName = r.schemaname,
@@ -158,13 +181,56 @@ public class PostgreSqlProvider : BaseDatabaseProvider
             CreatedAt = r.createdat,
             ModifiedAt = r.modifiedat
         }).ToList();
+
+        // Load parameters
+        var paramSql = """
+            SELECT
+                r.routine_name AS RoutineName,
+                r.routine_schema AS RoutineSchema,
+                p.parameter_name AS Name,
+                p.data_type AS DataType,
+                p.character_maximum_length AS MaxLength,
+                p.ordinal_position AS OrdinalPosition,
+                p.parameter_mode AS ParameterMode
+            FROM information_schema.parameters p
+            JOIN information_schema.routines r
+                ON p.specific_name = r.specific_name
+            WHERE r.routine_type = 'PROCEDURE'
+              AND r.routine_schema NOT IN ('pg_catalog','information_schema')
+            """;
+
+        if (selectedProcedures != null && selectedProcedures.Count > 0)
+        {
+            paramSql += " AND (r.routine_schema || '.' || r.routine_name) IN @SelectedProcedures ";
+        }
+
+        var paramRows = await QueryAsync<dynamic>(connection, paramSql, new { SelectedProcedures = selectedProcedures }, cancellationToken);
+        var paramMap = paramRows.GroupBy(p => $"{p.routineschema}.{p.routinename}", StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.ToList(), StringComparer.OrdinalIgnoreCase);
+
+        foreach (var proc in procedures)
+        {
+            if (paramMap.TryGetValue(proc.FullName, out var paramsList))
+            {
+                proc.Parameters = paramsList.Select(p => new ParameterSchema
+                {
+                    Name = p.name ?? string.Empty,
+                    DataType = p.maxlength != null && p.maxlength > 0 ? $"{p.datatype}({p.maxlength})" : (string)p.datatype,
+                    OrdinalPosition = p.ordinal_position,
+                    IsOutput = p.parametermode == "INOUT" || p.parametermode == "OUT"
+                }).OrderBy(p => p.OrdinalPosition).ToList();
+            }
+        }
+
+        return procedures;
     }
 
     public override async Task<List<ViewSchema>> GetViewsAsync(
         ConnectionProfile connection,
+        IReadOnlyCollection<string>? selectedViews = null,
         CancellationToken cancellationToken = default)
     {
-        const string sql = """
+        var sql = """
             SELECT
                 v.table_name        AS Name,
                 v.table_schema      AS SchemaName,
@@ -172,10 +238,16 @@ public class PostgreSqlProvider : BaseDatabaseProvider
                 v.is_updatable      AS IsUpdatable
             FROM information_schema.views v
             WHERE v.table_schema NOT IN ('pg_catalog','information_schema')
-            ORDER BY v.table_schema, v.table_name
             """;
 
-        var rows = await QueryAsync<dynamic>(connection, sql, cancellationToken: cancellationToken);
+        if (selectedViews != null && selectedViews.Count > 0)
+        {
+            sql += " AND (v.table_schema || '.' || v.table_name) IN @SelectedViews ";
+        }
+
+        sql += " ORDER BY v.table_schema, v.table_name";
+
+        var rows = await QueryAsync<dynamic>(connection, sql, new { SelectedViews = selectedViews }, cancellationToken);
 
         return rows.Select(r => new ViewSchema
         {
@@ -189,9 +261,10 @@ public class PostgreSqlProvider : BaseDatabaseProvider
 
     public override async Task<List<FunctionSchema>> GetFunctionsAsync(
         ConnectionProfile connection,
+        IReadOnlyCollection<string>? selectedFunctions = null,
         CancellationToken cancellationToken = default)
     {
-        const string sql = """
+        var sql = """
             SELECT
                 r.routine_name          AS Name,
                 r.routine_schema        AS SchemaName,
@@ -203,10 +276,16 @@ public class PostgreSqlProvider : BaseDatabaseProvider
             FROM information_schema.routines r
             WHERE r.routine_type = 'FUNCTION'
               AND r.routine_schema NOT IN ('pg_catalog','information_schema')
-            ORDER BY r.routine_schema, r.routine_name
             """;
 
-        var rows = await QueryAsync<dynamic>(connection, sql, cancellationToken: cancellationToken);
+        if (selectedFunctions != null && selectedFunctions.Count > 0)
+        {
+            sql += " AND (r.routine_schema || '.' || r.routine_name) IN @SelectedFunctions ";
+        }
+
+        sql += " ORDER BY r.routine_schema, r.routine_name";
+
+        var rows = await QueryAsync<dynamic>(connection, sql, new { SelectedFunctions = selectedFunctions }, cancellationToken);
 
         return rows.Select(r => new FunctionSchema
         {
@@ -223,9 +302,10 @@ public class PostgreSqlProvider : BaseDatabaseProvider
 
     public override async Task<List<TriggerSchema>> GetTriggersAsync(
         ConnectionProfile connection,
+        IReadOnlyCollection<string>? selectedTriggers = null,
         CancellationToken cancellationToken = default)
     {
-        const string sql = """
+        var sql = """
             SELECT
                 t.trigger_name          AS Name,
                 t.trigger_schema        AS SchemaName,
@@ -235,10 +315,16 @@ public class PostgreSqlProvider : BaseDatabaseProvider
                 t.action_statement      AS Definition
             FROM information_schema.triggers t
             WHERE t.trigger_schema NOT IN ('pg_catalog','information_schema')
-            ORDER BY t.trigger_schema, t.trigger_name
             """;
 
-        var rows = await QueryAsync<dynamic>(connection, sql, cancellationToken: cancellationToken);
+        if (selectedTriggers != null && selectedTriggers.Count > 0)
+        {
+            sql += " AND (t.trigger_schema || '.' || t.trigger_name) IN @SelectedTriggers ";
+        }
+
+        sql += " ORDER BY t.trigger_schema, t.trigger_name";
+
+        var rows = await QueryAsync<dynamic>(connection, sql, new { SelectedTriggers = selectedTriggers }, cancellationToken);
 
         return rows.Select(r => new TriggerSchema
         {
@@ -255,9 +341,10 @@ public class PostgreSqlProvider : BaseDatabaseProvider
 
     public override async Task<List<ConstraintSchema>> GetConstraintsAsync(
         ConnectionProfile connection,
+        IReadOnlyCollection<string>? selectedTables = null,
         CancellationToken cancellationToken = default)
     {
-        const string sql = """
+        var sql = """
             SELECT
                 tc.constraint_name      AS Name,
                 tc.table_schema         AS SchemaName,
@@ -278,29 +365,45 @@ public class PostgreSqlProvider : BaseDatabaseProvider
             LEFT JOIN information_schema.check_constraints cc
                 ON cc.constraint_name = tc.constraint_name
             WHERE tc.table_schema NOT IN ('pg_catalog','information_schema')
-            ORDER BY tc.table_schema, tc.table_name, tc.constraint_name
             """;
 
-        var rows = await QueryAsync<dynamic>(connection, sql, cancellationToken: cancellationToken);
-
-        return rows.Select(r => new ConstraintSchema
+        if (selectedTables != null && selectedTables.Count > 0)
         {
-            Name = r.name,
-            SchemaName = r.schemaname,
-            TableName = r.tablename,
-            ConstraintType = r.constrainttype,
-            ColumnName = r.columnname,
-            ReferencedTable = r.referencedtable,
-            ReferencedColumn = r.referencedcolumn,
-            CheckClause = r.checkclause
+            sql += " AND (tc.table_schema || '.' || tc.table_name) IN @SelectedTables ";
+        }
+
+        sql += " ORDER BY tc.table_schema, tc.table_name, tc.constraint_name";
+
+        var rows = await QueryAsync<dynamic>(connection, sql, new { SelectedTables = selectedTables }, cancellationToken);
+
+        var grouped = rows.GroupBy(r => new { Name = (string)r.name, SchemaName = (string)r.schemaname, TableName = (string)r.tablename });
+
+        return grouped.Select(g =>
+        {
+            var first = g.First();
+            var columnNames = string.Join(",", g.Select(x => (string)x.columnname).Where(c => !string.IsNullOrEmpty(c)));
+            var referencedColumns = string.Join(",", g.Select(x => (string)x.referencedcolumn).Where(c => !string.IsNullOrEmpty(c)));
+
+            return new ConstraintSchema
+            {
+                Name = first.name,
+                SchemaName = first.schemaname,
+                TableName = first.tablename,
+                ConstraintType = first.constrainttype,
+                ColumnName = string.IsNullOrEmpty(columnNames) ? null : columnNames,
+                ReferencedTable = first.referencedtable,
+                ReferencedColumn = string.IsNullOrEmpty(referencedColumns) ? null : referencedColumns,
+                CheckClause = first.checkclause
+            };
         }).ToList();
     }
 
     public override async Task<List<IndexSchema>> GetIndexesAsync(
         ConnectionProfile connection,
+        IReadOnlyCollection<string>? selectedTables = null,
         CancellationToken cancellationToken = default)
     {
-        const string sql = """
+        var sql = """
             SELECT
                 i.relname               AS Name,
                 n.nspname               AS SchemaName,
@@ -319,13 +422,21 @@ public class PostgreSqlProvider : BaseDatabaseProvider
             JOIN pg_attribute a ON a.attrelid = t.oid
                 AND a.attnum = ANY(ix.indkey)
             WHERE n.nspname NOT IN ('pg_catalog','information_schema')
+            """;
+
+        if (selectedTables != null && selectedTables.Count > 0)
+        {
+            sql += " AND (n.nspname || '.' || t.relname) IN @SelectedTables ";
+        }
+
+        sql += """
             GROUP BY i.relname, n.nspname, t.relname,
                      am.amname, ix.indisunique, ix.indisprimary,
                      ix.indisvalid, ix.indisclustered
             ORDER BY n.nspname, t.relname, i.relname
             """;
 
-        var rows = await QueryAsync<dynamic>(connection, sql, cancellationToken: cancellationToken);
+        var rows = await QueryAsync<dynamic>(connection, sql, new { SelectedTables = selectedTables }, cancellationToken);
 
         return rows.Select(r => new IndexSchema
         {
