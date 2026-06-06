@@ -1,10 +1,10 @@
-namespace DatabaseAuditor.Application.Services;
-
 using DatabaseAuditor.Domain.Entities;
 using DatabaseAuditor.Domain.Enums;
 using DatabaseAuditor.Domain.Interfaces;
 using DatabaseAuditor.Domain.ValueObjects;
 using Serilog;
+
+namespace DatabaseAuditor.Application.Services;
 
 public class CompareService : ICompareService
 {
@@ -42,13 +42,13 @@ public class CompareService : ICompareService
             session.Results = compareType switch
             {
                 CompareType.Table => await CompareTablesAsync(sourceProvider, targetProvider, source, target, selectedSet, cancellationToken),
-                CompareType.Column => await CompareColumnsAsync(sourceProvider, targetProvider, source, target, cancellationToken),
+                CompareType.Column => await CompareColumnsAsync(sourceProvider, targetProvider, source, target, selectedSet, cancellationToken),
                 CompareType.Procedure => await CompareProceduresAsync(sourceProvider, targetProvider, source, target, selectedSet, cancellationToken),
                 CompareType.View => await CompareViewsAsync(sourceProvider, targetProvider, source, target, selectedSet, cancellationToken),
                 CompareType.Function => await CompareFunctionsAsync(sourceProvider, targetProvider, source, target, selectedSet, cancellationToken),
                 CompareType.Trigger => await CompareTriggersAsync(sourceProvider, targetProvider, source, target, selectedSet, cancellationToken),
-                CompareType.Constraint => await CompareConstraintsAsync(sourceProvider, targetProvider, source, target, cancellationToken),
-                CompareType.Index => await CompareIndexesAsync(sourceProvider, targetProvider, source, target, cancellationToken),
+                CompareType.Constraint => await CompareConstraintsAsync(sourceProvider, targetProvider, source, target, selectedSet, cancellationToken),
+                CompareType.Index => await CompareIndexesAsync(sourceProvider, targetProvider, source, target, selectedSet, cancellationToken),
                 CompareType.Database => await CompareDatabaseAsync(sourceProvider, targetProvider, source, target, cancellationToken),
                 _ => throw new NotSupportedException($"CompareType '{compareType}' is not supported.")
             };
@@ -86,27 +86,18 @@ public class CompareService : ICompareService
         HashSet<string> selectedObjects,
         CancellationToken cancellationToken)
     {
-        var sourceTask = LoadDetailedTablesAsync(sourceProvider, source, cancellationToken);
-        var targetTask = LoadDetailedTablesAsync(targetProvider, target, cancellationToken);
+        var selectedList = selectedObjects.Count > 0 ? selectedObjects.ToList() : null;
+        var sourceTask = LoadDetailedTablesAsync(sourceProvider, source, selectedList, cancellationToken);
+        var targetTask = LoadDetailedTablesAsync(targetProvider, target, selectedList, cancellationToken);
 
         await Task.WhenAll(sourceTask, targetTask);
 
         var sourceTables = sourceTask.Result;
         var targetTables = targetTask.Result;
 
-        if (selectedObjects.Count > 0)
-        {
-            sourceTables = sourceTables
-                .Where(t => selectedObjects.Contains(t.FullName))
-                .ToList();
-            targetTables = targetTables
-                .Where(t => selectedObjects.Contains(t.FullName))
-                .ToList();
-        }
-
         var results = new List<CompareResult>();
-        var sourceMap = sourceTables.ToDictionary(t => t.FullName, StringComparer.OrdinalIgnoreCase);
-        var targetMap = targetTables.ToDictionary(t => t.FullName, StringComparer.OrdinalIgnoreCase);
+        var sourceMap = ToSafeDictionary(sourceTables, t => t.FullName, t => t, StringComparer.OrdinalIgnoreCase);
+        var targetMap = ToSafeDictionary(targetTables, t => t.FullName, t => t, StringComparer.OrdinalIgnoreCase);
         var keys = sourceMap.Keys
             .Union(targetMap.Keys, StringComparer.OrdinalIgnoreCase)
             .OrderBy(k => k, StringComparer.OrdinalIgnoreCase);
@@ -167,11 +158,13 @@ public class CompareService : ICompareService
         IDatabaseProvider targetProvider,
         ConnectionProfile source,
         ConnectionProfile target,
+        HashSet<string> selectedObjects,
         CancellationToken cancellationToken)
     {
+        var selectedList = selectedObjects.Count > 0 ? selectedObjects.ToList() : null;
         var (sourceColumns, targetColumns) = await FetchBothAsync(
-            () => sourceProvider.GetColumnsAsync(source, cancellationToken),
-            () => targetProvider.GetColumnsAsync(target, cancellationToken));
+            () => sourceProvider.GetColumnsAsync(source, selectedList, cancellationToken),
+            () => targetProvider.GetColumnsAsync(target, selectedList, cancellationToken));
 
         return CompareObjectLists(
             sourceColumns,
@@ -189,18 +182,14 @@ public class CompareService : ICompareService
         HashSet<string> selectedObjects,
         CancellationToken cancellationToken)
     {
+        var selectedList = selectedObjects.Count > 0 ? selectedObjects.ToList() : null;
         var (sourceProcs, targetProcs) = await FetchBothAsync(
-            () => targetProvider == sourceProvider
-                ? sourceProvider.GetProceduresAsync(source, cancellationToken)
-                : sourceProvider.GetProceduresAsync(source, cancellationToken),
-            () => targetProvider.GetProceduresAsync(target, cancellationToken));
-
-        var filteredSource = FilterBySelection(sourceProcs, selectedObjects);
-        var filteredTarget = FilterBySelection(targetProcs, selectedObjects);
+            () => sourceProvider.GetProceduresAsync(source, selectedList, cancellationToken),
+            () => targetProvider.GetProceduresAsync(target, selectedList, cancellationToken));
 
         return CompareObjectLists(
-            filteredSource,
-            filteredTarget,
+            sourceProcs,
+            targetProcs,
             p => p.FullName,
             CompareType.Procedure,
             (s, t) => GetProcedureDifferences(s, t));
@@ -214,13 +203,14 @@ public class CompareService : ICompareService
         HashSet<string> selectedObjects,
         CancellationToken cancellationToken)
     {
+        var selectedList = selectedObjects.Count > 0 ? selectedObjects.ToList() : null;
         var (sourceViews, targetViews) = await FetchBothAsync(
-            () => sourceProvider.GetViewsAsync(source, cancellationToken),
-            () => targetProvider.GetViewsAsync(target, cancellationToken));
+            () => sourceProvider.GetViewsAsync(source, selectedList, cancellationToken),
+            () => targetProvider.GetViewsAsync(target, selectedList, cancellationToken));
 
         return CompareObjectLists(
-            FilterBySelection(sourceViews, selectedObjects),
-            FilterBySelection(targetViews, selectedObjects),
+            sourceViews,
+            targetViews,
             v => v.FullName,
             CompareType.View,
             (s, t) => GetDefinitionDifferences(s.NormalizedDefinition, t.NormalizedDefinition));
@@ -234,16 +224,17 @@ public class CompareService : ICompareService
         HashSet<string> selectedObjects,
         CancellationToken cancellationToken)
     {
+        var selectedList = selectedObjects.Count > 0 ? selectedObjects.ToList() : null;
         var (sourceFuncs, targetFuncs) = await FetchBothAsync(
-            () => sourceProvider.GetFunctionsAsync(source, cancellationToken),
-            () => targetProvider.GetFunctionsAsync(target, cancellationToken));
+            () => sourceProvider.GetFunctionsAsync(source, selectedList, cancellationToken),
+            () => targetProvider.GetFunctionsAsync(target, selectedList, cancellationToken));
 
         return CompareObjectLists(
-            FilterBySelection(sourceFuncs, selectedObjects),
-            FilterBySelection(targetFuncs, selectedObjects),
+            sourceFuncs,
+            targetFuncs,
             f => f.FullName,
             CompareType.Function,
-            (s, t) => GetDefinitionDifferences(s.NormalizedDefinition, t.NormalizedDefinition));
+            (s, t) => GetFunctionDifferences(s, t));
     }
 
     private async Task<List<CompareResult>> CompareTriggersAsync(
@@ -254,13 +245,14 @@ public class CompareService : ICompareService
         HashSet<string> selectedObjects,
         CancellationToken cancellationToken)
     {
+        var selectedList = selectedObjects.Count > 0 ? selectedObjects.ToList() : null;
         var (sourceTriggers, targetTriggers) = await FetchBothAsync(
-            () => sourceProvider.GetTriggersAsync(source, cancellationToken),
-            () => targetProvider.GetTriggersAsync(target, cancellationToken));
+            () => sourceProvider.GetTriggersAsync(source, selectedList, cancellationToken),
+            () => targetProvider.GetTriggersAsync(target, selectedList, cancellationToken));
 
         return CompareObjectLists(
-            FilterBySelection(sourceTriggers, selectedObjects),
-            FilterBySelection(targetTriggers, selectedObjects),
+            sourceTriggers,
+            targetTriggers,
             t => t.FullName,
             CompareType.Trigger,
             (s, t) => GetTriggerDifferences(s, t));
@@ -271,11 +263,13 @@ public class CompareService : ICompareService
         IDatabaseProvider targetProvider,
         ConnectionProfile source,
         ConnectionProfile target,
+        HashSet<string> selectedObjects,
         CancellationToken cancellationToken)
     {
+        var selectedList = selectedObjects.Count > 0 ? selectedObjects.ToList() : null;
         var (sourceConstraints, targetConstraints) = await FetchBothAsync(
-            () => sourceProvider.GetConstraintsAsync(source, cancellationToken),
-            () => targetProvider.GetConstraintsAsync(target, cancellationToken));
+            () => sourceProvider.GetConstraintsAsync(source, selectedList, cancellationToken),
+            () => targetProvider.GetConstraintsAsync(target, selectedList, cancellationToken));
 
         return CompareObjectLists(
             sourceConstraints,
@@ -290,11 +284,13 @@ public class CompareService : ICompareService
         IDatabaseProvider targetProvider,
         ConnectionProfile source,
         ConnectionProfile target,
+        HashSet<string> selectedObjects,
         CancellationToken cancellationToken)
     {
+        var selectedList = selectedObjects.Count > 0 ? selectedObjects.ToList() : null;
         var (sourceIndexes, targetIndexes) = await FetchBothAsync(
-            () => sourceProvider.GetIndexesAsync(source, cancellationToken),
-            () => targetProvider.GetIndexesAsync(target, cancellationToken));
+            () => sourceProvider.GetIndexesAsync(source, selectedList, cancellationToken),
+            () => targetProvider.GetIndexesAsync(target, selectedList, cancellationToken));
 
         return CompareObjectLists(
             sourceIndexes,
@@ -327,16 +323,17 @@ public class CompareService : ICompareService
     private static async Task<List<TableSchema>> LoadDetailedTablesAsync(
         IDatabaseProvider provider,
         ConnectionProfile connection,
+        IReadOnlyCollection<string>? selectedTables,
         CancellationToken cancellationToken)
     {
-        var tablesTask = provider.GetTablesAsync(connection, cancellationToken);
-        var columnsTask = provider.GetColumnsAsync(connection, cancellationToken);
-        var constraintsTask = provider.GetConstraintsAsync(connection, cancellationToken);
-        var indexesTask = provider.GetIndexesAsync(connection, cancellationToken);
+        var tablesTask = provider.GetTablesAsync(connection, selectedTables, cancellationToken);
+        var columnsTask = provider.GetColumnsAsync(connection, selectedTables, cancellationToken);
+        var constraintsTask = provider.GetConstraintsAsync(connection, selectedTables, cancellationToken);
+        var indexesTask = provider.GetIndexesAsync(connection, selectedTables, cancellationToken);
 
         await Task.WhenAll(tablesTask, columnsTask, constraintsTask, indexesTask);
 
-        var tableMap = tablesTask.Result.ToDictionary(t => t.FullName, StringComparer.OrdinalIgnoreCase);
+        var tableMap = ToSafeDictionary(tablesTask.Result, t => t.FullName, t => t, StringComparer.OrdinalIgnoreCase);
 
         foreach (var column in columnsTask.Result)
         {
@@ -361,12 +358,6 @@ public class CompareService : ICompareService
 
         return tableMap.Values.ToList();
     }
-
-    private static List<T> FilterBySelection<T>(List<T> items, HashSet<string> selectedObjects)
-        where T : SchemaObject
-        => selectedObjects.Count == 0
-            ? items
-            : items.Where(i => selectedObjects.Contains(i.FullName)).ToList();
 
     private static HashSet<string> CreateSelectedSet(IReadOnlyCollection<string>? selectedObjects)
         => selectedObjects == null
@@ -401,6 +392,25 @@ public class CompareService : ICompareService
         return results;
     }
 
+    private static Dictionary<string, TElement> ToSafeDictionary<TSource, TElement>(
+        IEnumerable<TSource> source,
+        Func<TSource, string> keySelector,
+        Func<TSource, TElement> elementSelector,
+        IEqualityComparer<string> comparer)
+    {
+        var dictionary = new Dictionary<string, TElement>(comparer);
+        foreach (var item in source)
+        {
+            var key = keySelector(item);
+            if (string.IsNullOrEmpty(key)) continue;
+            if (!dictionary.ContainsKey(key))
+            {
+                dictionary.Add(key, elementSelector(item));
+            }
+        }
+        return dictionary;
+    }
+
     private static List<CompareResult> CompareObjectLists<T>(
         List<T> sourceList,
         List<T> targetList,
@@ -409,8 +419,8 @@ public class CompareService : ICompareService
         Func<T, T, List<string>> diffSelector) where T : SchemaObject
     {
         var results = new List<CompareResult>();
-        var sourceMap = sourceList.ToDictionary(keySelector, x => x, StringComparer.OrdinalIgnoreCase);
-        var targetMap = targetList.ToDictionary(keySelector, x => x, StringComparer.OrdinalIgnoreCase);
+        var sourceMap = ToSafeDictionary(sourceList, keySelector, x => x, StringComparer.OrdinalIgnoreCase);
+        var targetMap = ToSafeDictionary(targetList, keySelector, x => x, StringComparer.OrdinalIgnoreCase);
         var allKeys = sourceMap.Keys.Union(targetMap.Keys, StringComparer.OrdinalIgnoreCase);
 
         foreach (var key in allKeys)
@@ -444,7 +454,7 @@ public class CompareService : ICompareService
         ObjectStatus status,
         string? sourceValue,
         string? targetValue)
-        => new()
+        => new ()
         {
             ObjectType = objectType,
             ObjectName = schemaObject.Name,
@@ -462,7 +472,7 @@ public class CompareService : ICompareService
         string? sourceValue,
         string? targetValue,
         string? parentObject)
-        => new()
+        => new ()
         {
             ObjectType = objectType,
             ObjectName = schemaObject.Name,
@@ -479,9 +489,9 @@ public class CompareService : ICompareService
     {
         var diffs = new List<string>();
         if (!string.Equals(s.Engine, t.Engine, StringComparison.OrdinalIgnoreCase))
-            diffs.Add($"Engine: {s.Engine} -> {t.Engine}");
+            diffs.Add($"Engine: {s.Engine ?? "NULL"} -> {t.Engine ?? "NULL"}");
         if (!string.Equals(s.Collation, t.Collation, StringComparison.OrdinalIgnoreCase))
-            diffs.Add($"Collation: {s.Collation} -> {t.Collation}");
+            diffs.Add($"Collation: {s.Collation ?? "NULL"} -> {t.Collation ?? "NULL"}");
         if (s.TotalRows != t.TotalRows)
             diffs.Add($"Approximate Rows: {s.TotalRows} -> {t.TotalRows}");
         return diffs;
@@ -490,14 +500,32 @@ public class CompareService : ICompareService
     private static List<string> GetColumnDifferences(ColumnSchema s, ColumnSchema t)
     {
         var diffs = new List<string>();
-        if (s.DataTypeFull != t.DataTypeFull) diffs.Add($"DataType: {s.DataTypeFull} -> {t.DataTypeFull}");
-        if (s.IsNullable != t.IsNullable) diffs.Add($"Nullable: {s.IsNullable} -> {t.IsNullable}");
-        if (s.IsIdentity != t.IsIdentity) diffs.Add($"Identity: {s.IsIdentity} -> {t.IsIdentity}");
-        if (s.IsPrimaryKey != t.IsPrimaryKey) diffs.Add($"PrimaryKey: {s.IsPrimaryKey} -> {t.IsPrimaryKey}");
-        if (s.IsForeignKey != t.IsForeignKey) diffs.Add($"ForeignKey: {s.IsForeignKey} -> {t.IsForeignKey}");
-        if (s.IsComputed != t.IsComputed) diffs.Add($"Computed: {s.IsComputed} -> {t.IsComputed}");
-        if (!string.Equals(s.DefaultValue, t.DefaultValue, StringComparison.OrdinalIgnoreCase)) diffs.Add($"Default: {s.DefaultValue} -> {t.DefaultValue}");
-        if (s.OrdinalPosition != t.OrdinalPosition) diffs.Add($"Position: {s.OrdinalPosition} -> {t.OrdinalPosition}");
+        if (!string.Equals(s.DataType, t.DataType, StringComparison.OrdinalIgnoreCase))
+            diffs.Add($"DataType: {s.DataType} -> {t.DataType}");
+        if (s.MaxLength != t.MaxLength)
+            diffs.Add($"MaxLength: {s.MaxLength?.ToString() ?? "NULL"} -> {t.MaxLength?.ToString() ?? "NULL"}");
+        if (s.Precision != t.Precision)
+            diffs.Add($"Precision: {s.Precision?.ToString() ?? "NULL"} -> {t.Precision?.ToString() ?? "NULL"}");
+        if (s.Scale != t.Scale)
+            diffs.Add($"Scale: {s.Scale?.ToString() ?? "NULL"} -> {t.Scale?.ToString() ?? "NULL"}");
+        if (s.IsNullable != t.IsNullable)
+            diffs.Add($"Nullable: {s.IsNullable} -> {t.IsNullable}");
+        if (s.IsIdentity != t.IsIdentity)
+            diffs.Add($"Identity: {s.IsIdentity} -> {t.IsIdentity}");
+        if (s.IsPrimaryKey != t.IsPrimaryKey)
+            diffs.Add($"PrimaryKey: {s.IsPrimaryKey} -> {t.IsPrimaryKey}");
+        if (s.IsForeignKey != t.IsForeignKey)
+            diffs.Add($"ForeignKey: {s.IsForeignKey} -> {t.IsForeignKey}");
+        if (s.IsComputed != t.IsComputed)
+            diffs.Add($"Computed: {s.IsComputed} -> {t.IsComputed}");
+
+        var sDefault = s.DefaultValue?.Trim() ?? string.Empty;
+        var tDefault = t.DefaultValue?.Trim() ?? string.Empty;
+        if (!string.Equals(sDefault, tDefault, StringComparison.OrdinalIgnoreCase))
+            diffs.Add($"Default: {(string.IsNullOrEmpty(sDefault) ? "NULL" : sDefault)} -> {(string.IsNullOrEmpty(tDefault) ? "NULL" : tDefault)}");
+
+        if (s.OrdinalPosition != t.OrdinalPosition)
+            diffs.Add($"Position: {s.OrdinalPosition} -> {t.OrdinalPosition}");
         return diffs;
     }
 
@@ -505,9 +533,51 @@ public class CompareService : ICompareService
     {
         var diffs = GetDefinitionDifferences(s.NormalizedDefinition, t.NormalizedDefinition);
         if (!string.Equals(s.ReturnType, t.ReturnType, StringComparison.OrdinalIgnoreCase))
-            diffs.Add($"ReturnType: {s.ReturnType} -> {t.ReturnType}");
+            diffs.Add($"ReturnType: {s.ReturnType ?? "NONE"} -> {t.ReturnType ?? "NONE"}");
         if (!string.Equals(s.SchemaName, t.SchemaName, StringComparison.OrdinalIgnoreCase))
             diffs.Add($"Schema: {s.SchemaName} -> {t.SchemaName}");
+
+        // Compare parameters count and details
+        if (s.Parameters.Count != t.Parameters.Count)
+        {
+            diffs.Add($"Parameter Count: {s.Parameters.Count} -> {t.Parameters.Count}");
+        }
+
+        var maxCount = Math.Max(s.Parameters.Count, t.Parameters.Count);
+        for (int i = 0; i < maxCount; i++)
+        {
+            if (i < s.Parameters.Count && i < t.Parameters.Count)
+            {
+                var sp = s.Parameters[i];
+                var tp = t.Parameters[i];
+
+                if (!string.Equals(sp.Name, tp.Name, StringComparison.OrdinalIgnoreCase))
+                {
+                    diffs.Add($"Parameter {i + 1} Name: {sp.Name} -> {tp.Name}");
+                }
+                if (!string.Equals(sp.DataType, tp.DataType, StringComparison.OrdinalIgnoreCase))
+                {
+                    diffs.Add($"Parameter {i + 1} '{sp.Name}' DataType: {sp.DataType} -> {tp.DataType}");
+                }
+                if (sp.IsOutput != tp.IsOutput)
+                {
+                    diffs.Add($"Parameter {i + 1} '{sp.Name}' IsOutput: {sp.IsOutput} -> {tp.IsOutput}");
+                }
+                if (sp.OrdinalPosition != tp.OrdinalPosition)
+                {
+                    diffs.Add($"Parameter {i + 1} '{sp.Name}' Position: {sp.OrdinalPosition} -> {tp.OrdinalPosition}");
+                }
+            }
+            else if (i < s.Parameters.Count)
+            {
+                diffs.Add($"Parameter '{s.Parameters[i].Name}' is missing in Target");
+            }
+            else
+            {
+                diffs.Add($"Parameter '{t.Parameters[i].Name}' is missing in Source");
+            }
+        }
+
         return diffs;
     }
 
@@ -518,6 +588,14 @@ public class CompareService : ICompareService
         var normalizedTarget = t?.Trim().ToUpperInvariant();
         if (normalizedSource != normalizedTarget)
             diffs.Add("Definition has changed.");
+        return diffs;
+    }
+
+    private static List<string> GetFunctionDifferences(FunctionSchema s, FunctionSchema t)
+    {
+        var diffs = GetDefinitionDifferences(s.NormalizedDefinition, t.NormalizedDefinition);
+        if (!string.Equals(s.ReturnType, t.ReturnType, StringComparison.OrdinalIgnoreCase))
+            diffs.Add($"ReturnType: {s.ReturnType ?? "NONE"} -> {t.ReturnType ?? "NONE"}");
         return diffs;
     }
 

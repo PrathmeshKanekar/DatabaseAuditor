@@ -6,221 +6,262 @@
              xmlns:local="clr-namespace:DatabaseAuditor.WPF.Views"
              mc:Ignorable="d" 
              Padding="24"
-             d:DesignHeight="600" d:DesignWidth="900">
-    <ScrollViewer VerticalScrollBarVisibility="Auto">
-        <StackPanel>
-            
+             d:DesignHeight="700" d:DesignWidth="1000">
+    <Grid>
+        <Grid.RowDefinitions>
             <!-- Header -->
-            <StackPanel Margin="0,0,0,20">
-                <TextBlock Text="Compare Database Schemas" Style="{DynamicResource TextHeading2}" FontWeight="Bold"/>
-                <TextBlock Text="Select source (baseline) and target (compare) database environments." Style="{DynamicResource TextCaption}" Margin="0,4,0,0"/>
-            </StackPanel>
+            <RowDefinition Height="Auto" />
+            <!-- Main Content Area -->
+            <RowDefinition Height="*" />
+            <!-- Action / Status panel -->
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+            
+        <!-- Header -->
+        <StackPanel Grid.Row="0" Margin="0,0,0,16">
+            <TextBlock Text="Compare Database Schemas" Style="{DynamicResource TextHeading2}" FontWeight="Bold"/>
+            <TextBlock Text="Select source (baseline) and target (compare) database environments." Style="{DynamicResource TextCaption}" Margin="0,4,0,0"/>
+        </StackPanel>
 
-            <!-- Connections Selection Card -->
-            <Border Style="{DynamicResource CardStyle}" Margin="0,0,0,20">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="*" />
-                    </Grid.ColumnDefinitions>
+        <!-- Main Content Area -->
+        <Grid Grid.Row="1" Margin="0,0,0,16">
+            <Grid.ColumnDefinitions>
+                <!-- Left Configuration Column -->
+                <ColumnDefinition Width="*" MinWidth="350"/>
+                <!-- Divider (Dynamic) -->
+                <ColumnDefinition Width="Auto"/>
+                <!-- Right Selection Column -->
+                <ColumnDefinition Width="1.2*">
+                    <ColumnDefinition.Style>
+                        <Style TargetType="ColumnDefinition">
+                            <Setter Property="Width" Value="1.2*"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsObjectSelectionVisible}" Value="False">
+                                    <Setter Property="Width" Value="0"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </ColumnDefinition.Style>
+                </ColumnDefinition>
+            </Grid.ColumnDefinitions>
 
-                    <!-- Source Selector -->
-                    <StackPanel Grid.Column="0">
-                        <TextBlock Text="Source Connection (Baseline)" FontWeight="SemiBold" Style="{DynamicResource TextBody}" Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,8"/>
-                        <ComboBox ItemsSource="{Binding Connections}"
-                                  SelectedItem="{Binding SelectedSource}"
-                                  Style="{DynamicResource ComboBoxStyle}"
-                                  DisplayMemberPath="Name"
-                                  Padding="10,8" />
-                        <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="{DynamicResource RadiusSM}" Padding="12" Margin="0,8,0,0" Height="100"
-                                Visibility="{Binding SelectedSource, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter=Invert}">
-                            <StackPanel DataContext="{Binding SelectedSource}">
-                                <TextBlock Text="{Binding DatabaseType, StringFormat='Database Type: \{0\}'}" Style="{DynamicResource TextCaption}" Margin="0,0,0,4"/>
-                                <TextBlock Text="{Binding Server, StringFormat='Server Address: \{0\}'}" Style="{DynamicResource TextCaption}" Margin="0,0,0,4"/>
-                                <TextBlock Text="{Binding DatabaseName, StringFormat='Database Name: \{0\}'}" Style="{DynamicResource TextCaption}" Margin="0,0,0,4"/>
-                                <TextBlock Text="{Binding Environment, StringFormat='Environment: \{0\}'}" Style="{DynamicResource TextCaption}"/>
-                            </StackPanel>
-                        </Border>
-                    </StackPanel>
-
-                    <!-- Swap Button -->
-                    <Button Grid.Column="1" Command="{Binding SwapConnectionsCommand}" Style="{DynamicResource ButtonStyle}" 
-                            Content="⇄" FontSize="20" FontWeight="Bold" Width="48" Height="36" VerticalAlignment="Center" Margin="16,0"/>
-
-                    <!-- Target Selector -->
-                    <StackPanel Grid.Column="2">
-                        <TextBlock Text="Target Connection (Compare)" FontWeight="SemiBold" Style="{DynamicResource TextBody}" Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,8"/>
-                        <ComboBox ItemsSource="{Binding Connections}"
-                                  SelectedItem="{Binding SelectedTarget}"
-                                  Style="{DynamicResource ComboBoxStyle}"
-                                  DisplayMemberPath="Name"
-                                  Padding="10,8"/>
-                        <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="{DynamicResource RadiusSM}" Padding="12" Margin="0,8,0,0" Height="100"
-                                Visibility="{Binding SelectedTarget, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter=Invert}">
-                            <StackPanel DataContext="{Binding SelectedTarget}">
-                                <TextBlock Text="{Binding DatabaseType, StringFormat='Database Type: \{0\}'}" Style="{DynamicResource TextCaption}" Margin="0,0,0,4"/>
-                                <TextBlock Text="{Binding Server, StringFormat='Server Address: \{0\}'}" Style="{DynamicResource TextCaption}" Margin="0,0,0,4"/>
-                                <TextBlock Text="{Binding DatabaseName, StringFormat='Database Name: \{0\}'}" Style="{DynamicResource TextCaption}" Margin="0,0,0,4"/>
-                                <TextBlock Text="{Binding Environment, StringFormat='Environment: \{0\}'}" Style="{DynamicResource TextCaption}"/>
-                            </StackPanel>
-                        </Border>
-                    </StackPanel>
-                </Grid>
-            </Border>
-
-            <!-- Settings Card -->
-            <Border Style="{DynamicResource CardStyle}" Margin="0,0,0,20">
-                <StackPanel>
-                    <TextBlock Text="Comparison Settings" Style="{DynamicResource SectionHeaderStyle}" Margin="0,0,0,12"/>
-                    <StackPanel>
-                        <TextBlock Text="Comparison Scope" Style="{DynamicResource TextCaption}" FontWeight="SemiBold" Margin="0,0,0,8"/>
-                        <ComboBox ItemsSource="{Binding ComparisonScopes}"
-                                  SelectedItem="{Binding SelectedComparisonScope}"
-                                  Style="{DynamicResource ComboBoxStyle}"
-                                  DisplayMemberPath="Display"
-                                  Padding="10,8"
-                                  Margin="0,0,0,16" />
-
-                        <Grid Visibility="{Binding IsObjectSelectionVisible, Converter={StaticResource BoolToVisibilityConverter}}">
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="12" />
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="12" />
-                                <RowDefinition Height="Auto" />
-                            </Grid.RowDefinitions>
-
-                            <StackPanel Grid.Row="0">
-                                <TextBlock Text="Object Type" Style="{DynamicResource TextCaption}" FontWeight="SemiBold" Margin="0,0,0,8"/>
-                                <ComboBox ItemsSource="{Binding ObjectTypes}"
-                                          SelectedItem="{Binding SelectedObjectType}"
-                                          Style="{DynamicResource ComboBoxStyle}"
-                                          DisplayMemberPath="Display"
-                                          Padding="10,8" />
-                            </StackPanel>
-
-                            <StackPanel Grid.Row="2">
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0" Text="Search Objects" Style="{DynamicResource TextCaption}" FontWeight="SemiBold" Margin="0,0,0,8"/>
-                                    <Button Grid.Column="1" Command="{Binding RefreshObjectsCommand}" Style="{DynamicResource ButtonStyle}" Content="Refresh" Padding="10,4"/>
-                                </Grid>
-                                <TextBox Text="{Binding ObjectSearchText, UpdateSourceTrigger=PropertyChanged}"
-                                         Style="{DynamicResource TextBoxStyle}"
-                                         Padding="10,8" />
-                            </StackPanel>
-
-                            <Border Grid.Row="4" Background="{DynamicResource SurfaceBrush}" CornerRadius="{DynamicResource RadiusSM}" Padding="12">
-                                <Grid>
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="Auto" />
-                                        <RowDefinition Height="8" />
-                                        <RowDefinition Height="*" />
-                                    </Grid.RowDefinitions>
-
-                                    <Grid Grid.Row="0">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock Grid.Column="0" Text="{Binding SelectedObjectsSummary}" Style="{DynamicResource TextCaption}" VerticalAlignment="Center"/>
-                                        <StackPanel Grid.Column="1" Orientation="Horizontal"
-                                                    Visibility="{Binding IsMultipleObjectMode, Converter={StaticResource BoolToVisibilityConverter}}">
-                                            <Button Command="{Binding SelectAllObjectsCommand}" Style="{DynamicResource ButtonStyle}" Content="Select All" Padding="10,4" Margin="0,0,8,0"/>
-                                            <Button Command="{Binding DeselectAllObjectsCommand}" Style="{DynamicResource ButtonStyle}" Content="Deselect All" Padding="10,4" Margin="0,0,8,0"/>
-                                            <Button Command="{Binding InvertSelectionCommand}" Style="{DynamicResource ButtonStyle}" Content="Invert" Padding="10,4"/>
-                                        </StackPanel>
-                                    </Grid>
-
-                                    <ComboBox Grid.Row="2"
-                                              ItemsSource="{Binding FilteredObjects}"
-                                              SelectedItem="{Binding SelectedObjectItem}"
-                                              DisplayMemberPath="Name"
-                                              Style="{DynamicResource ComboBoxStyle}"
-                                              Padding="10,8"
-                                              Visibility="{Binding IsSingleObjectMode, Converter={StaticResource BoolToVisibilityConverter}}" />
-
-                                    <Grid Grid.Row="2" Visibility="{Binding IsMultipleObjectMode, Converter={StaticResource BoolToVisibilityConverter}}">
-                                        <Grid.RowDefinitions>
-                                            <RowDefinition Height="Auto" />
-                                            <RowDefinition Height="*" />
-                                        </Grid.RowDefinitions>
-
-                                        <TextBlock Grid.Row="0"
-                                                   Text="{Binding IsLoadingObjects, StringFormat='Loading objects: {0}'}"
-                                                   Style="{DynamicResource TextCaption}"
-                                                   Visibility="{Binding IsLoadingObjects, Converter={StaticResource BoolToVisibilityConverter}}"
-                                                   Margin="0,0,0,8"/>
-
-                                        <ListBox Grid.Row="1"
-                                                 ItemsSource="{Binding FilteredObjects}"
-                                                 Background="Transparent"
-                                                 BorderThickness="0"
-                                                 ScrollViewer.VerticalScrollBarVisibility="Auto"
-                                                 MaxHeight="260">
-                                            <ListBox.ItemTemplate>
-                                                <DataTemplate>
-                                                    <CheckBox IsChecked="{Binding IsSelected}" Content="{Binding Name}" Margin="0,4,0,4"/>
-                                                </DataTemplate>
-                                            </ListBox.ItemTemplate>
-                                        </ListBox>
-                                    </Grid>
-                                </Grid>
-                            </Border>
-                        </Grid>
-
-                        <CheckBox IsChecked="{Binding IncludeUnchanged}" Style="{DynamicResource CheckBoxStyle}" Content="Include unchanged items in final report" Margin="0,16,0,0"/>
-                    </StackPanel>
-                </StackPanel>
-            </Border>
-
-            <!-- Action panel -->
-            <Border Style="{DynamicResource CardStyle}">
-                <StackPanel>
-                    <!-- Progress Section -->
-                    <StackPanel Visibility="{Binding IsComparing, Converter={StaticResource BoolToVisibilityConverter}}" Margin="0,0,0,16">
-                        <TextBlock Text="{Binding ProgressMessage}" Style="{DynamicResource TextCaption}" Margin="0,0,0,8"/>
-                        <ProgressBar Value="{Binding ProgressValue}" IsIndeterminate="{Binding IsIndeterminate}" Height="12" Background="{DynamicResource SurfaceBrush}" BorderThickness="0"/>
-                    </StackPanel>
-
-                    <!-- Error Alert -->
-                    <Border Background="#20FF0000" BorderBrush="#80FF0000" BorderThickness="1" CornerRadius="{DynamicResource RadiusMD}" Padding="16" Margin="0,0,0,16"
-                            Visibility="{Binding HasError, Converter={StaticResource BoolToVisibilityConverter}}">
+            <!-- Configuration (Left Panel) -->
+            <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                <StackPanel Margin="0,0,8,0">
+                    <!-- Connections Selection Card -->
+                    <Border Style="{DynamicResource CardStyle}" Margin="0,0,0,16">
                         <StackPanel>
-                            <TextBlock Text="Comparison Error" FontWeight="Bold" Foreground="{DynamicResource DeletedBrush}" FontSize="14" Margin="0,0,0,4"/>
-                            <TextBlock Text="{Binding ErrorMessage}" Style="{DynamicResource TextBody}" TextWrapping="Wrap"/>
+                            <TextBlock Text="Connection Configuration" Style="{DynamicResource SectionHeaderStyle}" Margin="0,0,0,12"/>
+                            
+                            <!-- Source Selector -->
+                            <TextBlock Text="Source Connection (Baseline)" FontWeight="SemiBold" Style="{DynamicResource TextBody}" Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,8"/>
+                            <ComboBox ItemsSource="{Binding Connections}"
+                                      SelectedItem="{Binding SelectedSource}"
+                                      Style="{DynamicResource ComboBoxStyle}"
+                                      DisplayMemberPath="Name"
+                                      Padding="10,8" />
+                            <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="{DynamicResource RadiusSM}" Padding="12" Margin="0,8,0,16" Height="100"
+                                    Visibility="{Binding SelectedSource, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter=Invert}">
+                                <StackPanel DataContext="{Binding SelectedSource}">
+                                    <TextBlock Text="{Binding DatabaseType, StringFormat='Database Type: \{0\}'}" Style="{DynamicResource TextCaption}" Margin="0,0,0,4"/>
+                                    <TextBlock Text="{Binding Server, StringFormat='Server Address: \{0\}'}" Style="{DynamicResource TextCaption}" Margin="0,0,0,4"/>
+                                    <TextBlock Text="{Binding DatabaseName, StringFormat='Database Name: \{0\}'}" Style="{DynamicResource TextCaption}" Margin="0,0,0,4"/>
+                                    <TextBlock Text="{Binding Environment, StringFormat='Environment: \{0\}'}" Style="{DynamicResource TextCaption}"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Swap Button -->
+                            <Button Command="{Binding SwapConnectionsCommand}" Style="{DynamicResource ButtonStyle}" 
+                                    Content="⇄ Swap Baselines" FontSize="13" FontWeight="Bold" Height="36" Margin="0,0,0,16"/>
+
+                            <!-- Target Selector -->
+                            <TextBlock Text="Target Connection (Compare)" FontWeight="SemiBold" Style="{DynamicResource TextBody}" Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,8"/>
+                            <ComboBox ItemsSource="{Binding Connections}"
+                                      SelectedItem="{Binding SelectedTarget}"
+                                      Style="{DynamicResource ComboBoxStyle}"
+                                      DisplayMemberPath="Name"
+                                      Padding="10,8"/>
+                            <Border Background="{DynamicResource SurfaceBrush}" CornerRadius="{DynamicResource RadiusSM}" Padding="12" Margin="0,8,0,0" Height="100"
+                                    Visibility="{Binding SelectedTarget, Converter={StaticResource NullToVisibilityConverter}, ConverterParameter=Invert}">
+                                <StackPanel DataContext="{Binding SelectedTarget}">
+                                    <TextBlock Text="{Binding DatabaseType, StringFormat='Database Type: \{0\}'}" Style="{DynamicResource TextCaption}" Margin="0,0,0,4"/>
+                                    <TextBlock Text="{Binding Server, StringFormat='Server Address: \{0\}'}" Style="{DynamicResource TextCaption}" Margin="0,0,0,4"/>
+                                    <TextBlock Text="{Binding DatabaseName, StringFormat='Database Name: \{0\}'}" Style="{DynamicResource TextCaption}" Margin="0,0,0,4"/>
+                                    <TextBlock Text="{Binding Environment, StringFormat='Environment: \{0\}'}" Style="{DynamicResource TextCaption}"/>
+                                </StackPanel>
+                            </Border>
                         </StackPanel>
                     </Border>
 
-                    <!-- Success Alert -->
-                    <Border Background="#2000FF00" BorderBrush="#8000FF00" BorderThickness="1" CornerRadius="{DynamicResource RadiusMD}" Padding="16" Margin="0,0,0,16"
-                            Visibility="{Binding StatusMessage, Converter={StaticResource NullToVisibilityConverter}}">
-                        <TextBlock Text="{Binding StatusMessage}" Style="{DynamicResource TextBody}" Foreground="{DynamicResource UnchangedBrush}"/>
-                    </Border>
+                    <!-- Settings Card -->
+                    <Border Style="{DynamicResource CardStyle}" Margin="0,0,0,8">
+                        <StackPanel>
+                            <TextBlock Text="Comparison Settings" Style="{DynamicResource SectionHeaderStyle}" Margin="0,0,0,12"/>
+                            
+                            <TextBlock Text="Comparison Scope" Style="{DynamicResource TextCaption}" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                            <ComboBox ItemsSource="{Binding ComparisonScopes}"
+                                      SelectedItem="{Binding SelectedComparisonScope}"
+                                      Style="{DynamicResource ComboBoxStyle}"
+                                      DisplayMemberPath="Display"
+                                      Padding="10,8"
+                                      Margin="0,0,0,16" />
 
-                    <!-- Actions Buttons -->
-                    <Grid>
+                            <CheckBox IsChecked="{Binding IncludeUnchanged}" Style="{DynamicResource CheckBoxStyle}" Content="Include unchanged items in final report" Margin="0,8,0,0"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- Column Splitter (Visible when selection panel is open) -->
+            <GridSplitter Grid.Column="1" Width="12" Background="Transparent" ResizeBehavior="PreviousAndNext" ResizeDirection="Columns"
+                          Visibility="{Binding IsObjectSelectionVisible, Converter={StaticResource BoolToVisibilityConverter}}"/>
+
+            <!-- Object Selector (Right Panel) -->
+            <Border Grid.Column="2" Style="{DynamicResource CardStyle}" Margin="8,0,0,0"
+                    Visibility="{Binding IsObjectSelectionVisible, Converter={StaticResource BoolToVisibilityConverter}}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/> <!-- Header / Title -->
+                        <RowDefinition Height="Auto"/> <!-- Object Type dropdown -->
+                        <RowDefinition Height="Auto"/> <!-- Search bar -->
+                        <RowDefinition Height="Auto"/> <!-- Selection action buttons -->
+                        <RowDefinition Height="*"/>    <!-- Staged Items list -->
+                    </Grid.RowDefinitions>
+
+                    <!-- Header -->
+                    <TextBlock Grid.Row="0" Text="Select Comparison Objects" Style="{DynamicResource SectionHeaderStyle}" Margin="0,0,0,12"/>
+
+                    <!-- Object Type Selection -->
+                    <StackPanel Grid.Row="1" Margin="0,0,0,12">
+                        <TextBlock Text="Object Type" Style="{DynamicResource TextCaption}" FontWeight="SemiBold" Margin="0,0,0,6"/>
+                        <ComboBox ItemsSource="{Binding ObjectTypes}"
+                                  SelectedItem="{Binding SelectedObjectType}"
+                                  Style="{DynamicResource ComboBoxStyle}"
+                                  DisplayMemberPath="Display"
+                                  Padding="10,8" />
+                    </StackPanel>
+
+                    <!-- Search Bar & Refresh -->
+                    <Grid Grid.Row="2" Margin="0,0,0,12">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="6"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <Grid Grid.Row="0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Search Objects" Style="{DynamicResource TextCaption}" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                            <Button Grid.Column="1" Command="{Binding RefreshObjectsCommand}" Style="{DynamicResource ButtonStyle}" Content="Refresh List" Padding="12,4"/>
+                        </Grid>
+                        <TextBox Grid.Row="2" Text="{Binding ObjectSearchText, UpdateSourceTrigger=PropertyChanged}"
+                                 Style="{DynamicResource TextBoxStyle}"
+                                 Padding="10,8" />
+                    </Grid>
+
+                    <!-- Multi-select / Single-select Header info -->
+                    <Grid Grid.Row="3" Margin="0,0,0,8">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="{Binding SelectedObjectsSummary}" Style="{DynamicResource TextCaption}" FontWeight="SemiBold" VerticalAlignment="Center"/>
                         
-                        <Button Grid.Column="0" Command="{Binding ClearCompareCommand}" Style="{DynamicResource ButtonStyle}" Content="Reset" Width="100"/>
-                        
-                        <StackPanel Grid.Column="2" Orientation="Horizontal">
-                            <Button Command="{Binding CancelCompareCommand}" Style="{DynamicResource ButtonStyle}" Content="Cancel" Width="120" Margin="0,0,8,0"
-                                    Visibility="{Binding IsComparing, Converter={StaticResource BoolToVisibilityConverter}}"/>
-                            <Button Command="{Binding CompareCommand}" Style="{DynamicResource ButtonStyle}" Content="Run Comparison" Width="160" Background="{DynamicResource AccentBrush}" Foreground="White"
-                                    Visibility="{Binding IsComparing, Converter={StaticResource InverseBoolToVisibilityConverter}}"/>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal"
+                                    Visibility="{Binding IsMultipleObjectMode, Converter={StaticResource BoolToVisibilityConverter}}">
+                            <Button Command="{Binding SelectAllObjectsCommand}" Style="{DynamicResource ButtonStyle}" Content="Select All" Padding="10,4" Margin="0,0,6,0"/>
+                            <Button Command="{Binding DeselectAllObjectsCommand}" Style="{DynamicResource ButtonStyle}" Content="Clear All" Padding="10,4" Margin="0,0,6,0"/>
+                            <Button Command="{Binding InvertSelectionCommand}" Style="{DynamicResource ButtonStyle}" Content="Invert" Padding="10,4"/>
                         </StackPanel>
                     </Grid>
-                </StackPanel>
+
+                    <!-- The lists -->
+                    <Grid Grid.Row="4">
+                        <!-- Single Mode Selector -->
+                        <ComboBox ItemsSource="{Binding FilteredObjects}"
+                                  SelectedItem="{Binding SelectedObjectItem}"
+                                  DisplayMemberPath="Name"
+                                  Style="{DynamicResource ComboBoxStyle}"
+                                  Padding="10,8"
+                                  VerticalAlignment="Top"
+                                  Visibility="{Binding IsSingleObjectMode, Converter={StaticResource BoolToVisibilityConverter}}" />
+
+                        <!-- Multiple Mode Selector -->
+                        <Grid Visibility="{Binding IsMultipleObjectMode, Converter={StaticResource BoolToVisibilityConverter}}">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+
+                            <TextBlock Grid.Row="0"
+                                       Text="Loading DB schema items..."
+                                       Style="{DynamicResource TextCaption}"
+                                       Visibility="{Binding IsLoadingObjects, Converter={StaticResource BoolToVisibilityConverter}}"
+                                       Margin="0,0,0,8"/>
+
+                            <ListBox Grid.Row="1"
+                                     ItemsSource="{Binding FilteredObjects}"
+                                     Background="Transparent"
+                                     BorderThickness="1"
+                                     BorderBrush="{DynamicResource BorderBrush}"
+                                     ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <CheckBox IsChecked="{Binding IsSelected}" Content="{Binding Name}" Margin="4,6"/>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </Grid>
+                    </Grid>
+                </Grid>
             </Border>
-        </StackPanel>
-    </ScrollViewer>
+        </Grid>
+
+        <!-- Action Panel (Bottom Panel) -->
+        <Border Grid.Row="2" Style="{DynamicResource CardStyle}">
+            <StackPanel>
+                <!-- Progress Section -->
+                <StackPanel Visibility="{Binding IsComparing, Converter={StaticResource BoolToVisibilityConverter}}" Margin="0,0,0,16">
+                    <TextBlock Text="{Binding ProgressMessage}" Style="{DynamicResource TextCaption}" Margin="0,0,0,8"/>
+                    <ProgressBar Value="{Binding ProgressValue}" IsIndeterminate="{Binding IsIndeterminate}" Height="12" Background="{DynamicResource SurfaceBrush}" BorderThickness="0"/>
+                </StackPanel>
+
+                <!-- Error Alert -->
+                <Border Background="#20FF0000" BorderBrush="#80FF0000" BorderThickness="1" CornerRadius="{DynamicResource RadiusMD}" Padding="16" Margin="0,0,0,16"
+                        Visibility="{Binding HasError, Converter={StaticResource BoolToVisibilityConverter}}">
+                    <StackPanel>
+                        <TextBlock Text="Comparison Error" FontWeight="Bold" Foreground="{DynamicResource DeletedBrush}" FontSize="14" Margin="0,0,0,4"/>
+                        <TextBlock Text="{Binding ErrorMessage}" Style="{DynamicResource TextBody}" TextWrapping="Wrap"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Success Alert -->
+                <Border Background="#2000FF00" BorderBrush="#8000FF00" BorderThickness="1" CornerRadius="{DynamicResource RadiusMD}" Padding="16" Margin="0,0,0,16"
+                        Visibility="{Binding StatusMessage, Converter={StaticResource NullToVisibilityConverter}}">
+                    <TextBlock Text="{Binding StatusMessage}" Style="{DynamicResource TextBody}" Foreground="{DynamicResource UnchangedBrush}"/>
+                </Border>
+
+                <!-- Actions Buttons -->
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    
+                    <Button Grid.Column="0" Command="{Binding ClearCompareCommand}" Style="{DynamicResource ButtonStyle}" Content="Reset Options" Width="120"/>
+                    
+                    <StackPanel Grid.Column="2" Orientation="Horizontal">
+                        <Button Command="{Binding CancelCompareCommand}" Style="{DynamicResource ButtonStyle}" Content="Cancel Audit" Width="120" Margin="0,0,8,0"
+                                Visibility="{Binding IsComparing, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                        <Button Command="{Binding CompareCommand}" Style="{DynamicResource ButtonStyle}" Content="Run Comparison Audit" Width="200" Background="{DynamicResource AccentBrush}" Foreground="White"
+                                Visibility="{Binding IsComparing, Converter={StaticResource InverseBoolToVisibilityConverter}}"/>
+                    </StackPanel>
+                </Grid>
+            </StackPanel>
+        </Border>
+    </Grid>
 </UserControl>

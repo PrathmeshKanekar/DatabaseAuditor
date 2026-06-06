@@ -6,7 +6,7 @@
              xmlns:local="clr-namespace:DatabaseAuditor.WPF.Views"
              mc:Ignorable="d" 
              Padding="24"
-             d:DesignHeight="600" d:DesignWidth="1000">
+             d:DesignHeight="700" d:DesignWidth="1100">
     <Grid>
         <Grid.RowDefinitions>
             <!-- Header Info -->
@@ -30,7 +30,7 @@
                 <TextBlock Text="{Binding SessionInfo}" Style="{DynamicResource TextBody}" Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,4"/>
                 <TextBlock Text="{Binding ExecutionTime}" Style="{DynamicResource TextCaption}"/>
             </StackPanel>
-            <Button Grid.Column="1" Command="{Binding ExportResultsCommand}" Style="{DynamicResource ButtonStyle}" Content="Export Report" Width="120" Height="36" VerticalAlignment="Center"/>
+            <Button Grid.Column="1" Command="{Binding ExportResultsCommand}" Style="{DynamicResource ButtonStyle}" Content="Export Report" Width="140" Height="36" VerticalAlignment="Center"/>
         </Grid>
 
         <!-- Filter Bar -->
@@ -38,7 +38,7 @@
             <Grid>
                 <Grid.ColumnDefinitions>
                     <!-- Search -->
-                    <ColumnDefinition Width="220" />
+                    <ColumnDefinition Width="250" />
                     <ColumnDefinition Width="20" />
                     <!-- Filter Checkboxes -->
                     <ColumnDefinition Width="*" />
@@ -78,16 +78,16 @@
                 </StackPanel>
 
                 <!-- Reset button -->
-                <Button Grid.Column="4" Command="{Binding ClearFiltersCommand}" Style="{DynamicResource ButtonStyle}" Content="Clear Filters" Padding="12,6"/>
+                <Button Grid.Column="4" Command="{Binding ClearFiltersCommand}" Style="{DynamicResource ButtonStyle}" Content="Reset Filters" Padding="12,6"/>
             </Grid>
         </Border>
 
         <!-- Main Workspace -->
         <Grid Grid.Row="4" Visibility="{Binding HasResults, Converter={StaticResource BoolToVisibilityConverter}}">
             <Grid.RowDefinitions>
-                <RowDefinition Height="3*" />
+                <RowDefinition Height="3*" MinHeight="150" />
                 <RowDefinition Height="8" />
-                <RowDefinition Height="2*" />
+                <RowDefinition Height="2.5*" MinHeight="150" />
             </Grid.RowDefinitions>
 
             <!-- Grid of Results -->
@@ -149,19 +149,22 @@
                         <Grid Grid.Row="2" Margin="0,4,0,0">
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="12"/>
+                                <RowDefinition Height="6"/>
                                 <RowDefinition Height="*"/>
                             </Grid.RowDefinitions>
 
-                            <ItemsControl Grid.Row="0" ItemsSource="{Binding SelectedResult.Differences}">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <Border Background="{DynamicResource ModifiedBgBrush}" CornerRadius="{DynamicResource RadiusSM}" Padding="8,4" Margin="0,0,0,6">
-                                            <TextBlock Text="{Binding}" Foreground="{DynamicResource ModifiedBrush}" TextWrapping="Wrap"/>
-                                        </Border>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
+                            <!-- Differences List wrapped in a ScrollViewer to prevent pushing the DDL boxes off screen -->
+                            <ScrollViewer Grid.Row="0" MaxHeight="100" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                                <ItemsControl ItemsSource="{Binding SelectedResult.Differences}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Background="{DynamicResource ModifiedBgBrush}" CornerRadius="{DynamicResource RadiusSM}" Padding="8,4" Margin="0,0,0,6">
+                                                <TextBlock Text="{Binding}" Foreground="{DynamicResource ModifiedBrush}" TextWrapping="Wrap"/>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
 
                             <Grid Grid.Row="2">
                                 <Grid.ColumnDefinitions>

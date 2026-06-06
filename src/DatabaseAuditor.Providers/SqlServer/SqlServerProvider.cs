@@ -1,18 +1,22 @@
-namespace DatabaseAuditor.Providers.SqlServer;
-
 using DatabaseAuditor.Domain.Entities;
 using DatabaseAuditor.Domain.Enums;
 using DatabaseAuditor.Providers.Base;
 using Microsoft.Data.SqlClient;
 using System.Data;
 
+namespace DatabaseAuditor.Providers.SqlServer;
+
 public class SqlServerProvider : BaseDatabaseProvider
 {
     protected override IDbConnection CreateConnection(ConnectionProfile connection)
     {
+        var dataSource = connection.Port > 0
+            ? $"{connection.Server},{connection.Port}"
+            : connection.Server;
+
         var builder = new SqlConnectionStringBuilder
         {
-            DataSource = $"{connection.Server},{connection.Port}",
+            DataSource = dataSource,
             InitialCatalog = connection.DatabaseName,
             UserID = connection.Username,
             Password = connection.Password,
@@ -44,9 +48,10 @@ public class SqlServerProvider : BaseDatabaseProvider
 
     public override async Task<List<TableSchema>> GetTablesAsync(
         ConnectionProfile connection,
+        IReadOnlyCollection<string>? selectedTables = null,
         CancellationToken cancellationToken = default)
     {
-        const string sql = """
+        var sql = """
             SELECT
                 t.TABLE_NAME        AS Name,
                 t.TABLE_SCHEMA      AS SchemaName,
@@ -60,11 +65,19 @@ public class SqlServerProvider : BaseDatabaseProvider
             LEFT JOIN sys.partitions par
                 ON par.object_id = st.object_id AND par.index_id IN (0,1)
             WHERE t.TABLE_TYPE = 'BASE TABLE'
+            """;
+
+        if (selectedTables != null && selectedTables.Count > 0)
+        {
+            sql += " AND (t.TABLE_SCHEMA + '.' + t.TABLE_NAME) IN @SelectedTables ";
+        }
+
+        sql += """
             GROUP BY t.TABLE_NAME, t.TABLE_SCHEMA, p.value
             ORDER BY t.TABLE_SCHEMA, t.TABLE_NAME
             """;
 
-        var rows = await QueryAsync<dynamic>(connection, sql, cancellationToken: cancellationToken);
+        var rows = await QueryAsync<dynamic>(connection, sql, new { SelectedTables = selectedTables }, cancellationToken);
 
         return rows.Select(r => new TableSchema
         {
@@ -77,9 +90,10 @@ public class SqlServerProvider : BaseDatabaseProvider
 
     public override async Task<List<ColumnSchema>> GetColumnsAsync(
         ConnectionProfile connection,
+        IReadOnlyCollection<string>? selectedTables = null,
         CancellationToken cancellationToken = default)
     {
-        const string sql = """
+        var sql = """
             SELECT
                 c.COLUMN_NAME           AS Name,
                 c.TABLE_SCHEMA          AS SchemaName,
@@ -117,10 +131,17 @@ public class SqlServerProvider : BaseDatabaseProvider
             ) fk ON fk.TABLE_NAME = c.TABLE_NAME
                 AND fk.COLUMN_NAME = c.COLUMN_NAME
                 AND fk.TABLE_SCHEMA = c.TABLE_SCHEMA
-            ORDER BY c.TABLE_SCHEMA, c.TABLE_NAME, c.ORDINAL_POSITION
+            WHERE 1=1
             """;
 
-        var rows = await QueryAsync<dynamic>(connection, sql, cancellationToken: cancellationToken);
+        if (selectedTables != null && selectedTables.Count > 0)
+        {
+            sql += " AND (c.TABLE_SCHEMA + '.' + c.TABLE_NAME) IN @SelectedTables ";
+        }
+
+        sql += " ORDER BY c.TABLE_SCHEMA, c.TABLE_NAME, c.ORDINAL_POSITION";
+
+        var rows = await QueryAsync<dynamic>(connection, sql, new { SelectedTables = selectedTables }, cancellationToken);
 
         return rows.Select(r => new ColumnSchema
         {
@@ -144,9 +165,10 @@ public class SqlServerProvider : BaseDatabaseProvider
 
     public override async Task<List<ProcedureSchema>> GetProceduresAsync(
         ConnectionProfile connection,
+        IReadOnlyCollection<string>? selectedProcedures = null,
         CancellationToken cancellationToken = default)
     {
-        const string sql = """
+        var sql = """
             SELECT
                 r.ROUTINE_NAME      AS Name,
                 r.ROUTINE_SCHEMA    AS SchemaName,
@@ -155,12 +177,17 @@ public class SqlServerProvider : BaseDatabaseProvider
                 r.LAST_ALTERED      AS ModifiedAt
             FROM INFORMATION_SCHEMA.ROUTINES r
             WHERE r.ROUTINE_TYPE = 'PROCEDURE'
-            ORDER BY r.ROUTINE_SCHEMA, r.ROUTINE_NAME
             """;
 
-        var rows = await QueryAsync<dynamic>(connection, sql, cancellationToken: cancellationToken);
+        if (selectedProcedures != null && selectedProcedures.Count > 0)
+        {
+            sql += " AND (r.ROUTINE_SCHEMA + '.' + r.ROUTINE_NAME) IN @SelectedProcedures ";
+        }
 
-        return rows.Select(r => new ProcedureSchema
+        sql += " ORDER BY r.ROUTINE_SCHEMA, r.ROUTINE_NAME";
+
+        var rows = await QueryAsync<dynamic>(connection, sql, new { SelectedProcedures = selectedProcedures }, cancellationToken);
+        var procedures = rows.Select(r => new ProcedureSchema
         {
             Name = r.Name,
             SchemaName = r.SchemaName,
@@ -169,23 +196,70 @@ public class SqlServerProvider : BaseDatabaseProvider
             CreatedAt = r.CreatedAt,
             ModifiedAt = r.ModifiedAt
         }).ToList();
+
+        // Load parameters
+        var paramSql = """
+            SELECT
+                SPECIFIC_NAME AS RoutineName,
+                SPECIFIC_SCHEMA AS RoutineSchema,
+                PARAMETER_NAME AS Name,
+                DATA_TYPE AS DataType,
+                CHARACTER_MAXIMUM_LENGTH AS MaxLength,
+                ORDINAL_POSITION AS OrdinalPosition,
+                PARAMETER_MODE AS ParameterMode
+            FROM INFORMATION_SCHEMA.PARAMETERS
+            WHERE 1=1
+            """;
+
+        if (selectedProcedures != null && selectedProcedures.Count > 0)
+        {
+            paramSql += " AND (SPECIFIC_SCHEMA + '.' + SPECIFIC_NAME) IN @SelectedProcedures ";
+        }
+
+        var paramRows = await QueryAsync<dynamic>(connection, paramSql, new { SelectedProcedures = selectedProcedures }, cancellationToken);
+        var paramMap = paramRows.GroupBy(p => $"{p.RoutineSchema}.{p.RoutineName}", StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.ToList(), StringComparer.OrdinalIgnoreCase);
+
+        foreach (var proc in procedures)
+        {
+            if (paramMap.TryGetValue(proc.FullName, out var paramsList))
+            {
+                proc.Parameters = paramsList.Select(p => new ParameterSchema
+                {
+                    Name = p.Name ?? string.Empty,
+                    DataType = p.MaxLength != null && p.MaxLength > 0 ? $"{p.DataType}({p.MaxLength})" : (string)p.DataType,
+                    OrdinalPosition = p.OrdinalPosition,
+                    IsOutput = p.ParameterMode == "INOUT" || p.ParameterMode == "OUT"
+                }).OrderBy(p => p.OrdinalPosition).ToList();
+            }
+        }
+
+        return procedures;
     }
 
     public override async Task<List<ViewSchema>> GetViewsAsync(
         ConnectionProfile connection,
+        IReadOnlyCollection<string>? selectedViews = null,
         CancellationToken cancellationToken = default)
     {
-        const string sql = """
+        var sql = """
             SELECT
                 v.TABLE_NAME        AS Name,
                 v.TABLE_SCHEMA      AS SchemaName,
                 v.VIEW_DEFINITION   AS Definition,
                 v.IS_UPDATABLE      AS IsUpdatable
             FROM INFORMATION_SCHEMA.VIEWS v
-            ORDER BY v.TABLE_SCHEMA, v.TABLE_NAME
+            WHERE 1=1
             """;
 
-        var rows = await QueryAsync<dynamic>(connection, sql, cancellationToken: cancellationToken);
+        if (selectedViews != null && selectedViews.Count > 0)
+        {
+            sql += " AND (v.TABLE_SCHEMA + '.' + v.TABLE_NAME) IN @SelectedViews ";
+        }
+
+        sql += " ORDER BY v.TABLE_SCHEMA, v.TABLE_NAME";
+
+        var rows = await QueryAsync<dynamic>(connection, sql, new { SelectedViews = selectedViews }, cancellationToken);
 
         return rows.Select(r => new ViewSchema
         {
@@ -199,9 +273,10 @@ public class SqlServerProvider : BaseDatabaseProvider
 
     public override async Task<List<FunctionSchema>> GetFunctionsAsync(
         ConnectionProfile connection,
+        IReadOnlyCollection<string>? selectedFunctions = null,
         CancellationToken cancellationToken = default)
     {
-        const string sql = """
+        var sql = """
             SELECT
                 r.ROUTINE_NAME          AS Name,
                 r.ROUTINE_SCHEMA        AS SchemaName,
@@ -212,10 +287,16 @@ public class SqlServerProvider : BaseDatabaseProvider
                 r.LAST_ALTERED          AS ModifiedAt
             FROM INFORMATION_SCHEMA.ROUTINES r
             WHERE r.ROUTINE_TYPE = 'FUNCTION'
-            ORDER BY r.ROUTINE_SCHEMA, r.ROUTINE_NAME
             """;
 
-        var rows = await QueryAsync<dynamic>(connection, sql, cancellationToken: cancellationToken);
+        if (selectedFunctions != null && selectedFunctions.Count > 0)
+        {
+            sql += " AND (r.ROUTINE_SCHEMA + '.' + r.ROUTINE_NAME) IN @SelectedFunctions ";
+        }
+
+        sql += " ORDER BY r.ROUTINE_SCHEMA, r.ROUTINE_NAME";
+
+        var rows = await QueryAsync<dynamic>(connection, sql, new { SelectedFunctions = selectedFunctions }, cancellationToken);
 
         return rows.Select(r => new FunctionSchema
         {
@@ -232,9 +313,10 @@ public class SqlServerProvider : BaseDatabaseProvider
 
     public override async Task<List<TriggerSchema>> GetTriggersAsync(
         ConnectionProfile connection,
+        IReadOnlyCollection<string>? selectedTriggers = null,
         CancellationToken cancellationToken = default)
     {
-        const string sql = """
+        var sql = """
             SELECT
                 tr.name             AS Name,
                 s.name              AS SchemaName,
@@ -254,10 +336,16 @@ public class SqlServerProvider : BaseDatabaseProvider
             JOIN sys.trigger_events te ON te.object_id = tr.object_id
             JOIN sys.sql_modules m  ON m.object_id = tr.object_id
             WHERE tr.is_ms_shipped = 0
-            ORDER BY s.name, tr.name
             """;
 
-        var rows = await QueryAsync<dynamic>(connection, sql, cancellationToken: cancellationToken);
+        if (selectedTriggers != null && selectedTriggers.Count > 0)
+        {
+            sql += " AND (s.name + '.' + tr.name) IN @SelectedTriggers ";
+        }
+
+        sql += " ORDER BY s.name, tr.name";
+
+        var rows = await QueryAsync<dynamic>(connection, sql, new { SelectedTriggers = selectedTriggers }, cancellationToken);
 
         return rows.Select(r => new TriggerSchema
         {
@@ -276,9 +364,10 @@ public class SqlServerProvider : BaseDatabaseProvider
 
     public override async Task<List<ConstraintSchema>> GetConstraintsAsync(
         ConnectionProfile connection,
+        IReadOnlyCollection<string>? selectedTables = null,
         CancellationToken cancellationToken = default)
     {
-        const string sql = """
+        var sql = """
             SELECT
                 tc.CONSTRAINT_NAME      AS Name,
                 tc.TABLE_SCHEMA         AS SchemaName,
@@ -298,29 +387,46 @@ public class SqlServerProvider : BaseDatabaseProvider
                 ON ccu.CONSTRAINT_NAME = rc.UNIQUE_CONSTRAINT_NAME
             LEFT JOIN INFORMATION_SCHEMA.CHECK_CONSTRAINTS cc
                 ON cc.CONSTRAINT_NAME = tc.CONSTRAINT_NAME
-            ORDER BY tc.TABLE_SCHEMA, tc.TABLE_NAME, tc.CONSTRAINT_NAME
+            WHERE 1=1
             """;
 
-        var rows = await QueryAsync<dynamic>(connection, sql, cancellationToken: cancellationToken);
-
-        return rows.Select(r => new ConstraintSchema
+        if (selectedTables != null && selectedTables.Count > 0)
         {
-            Name = r.Name,
-            SchemaName = r.SchemaName,
-            TableName = r.TableName,
-            ConstraintType = r.ConstraintType,
-            ColumnName = r.ColumnName,
-            ReferencedTable = r.ReferencedTable,
-            ReferencedColumn = r.ReferencedColumn,
-            CheckClause = r.CheckClause
+            sql += " AND (tc.TABLE_SCHEMA + '.' + tc.TABLE_NAME) IN @SelectedTables ";
+        }
+
+        sql += " ORDER BY tc.TABLE_SCHEMA, tc.TABLE_NAME, tc.CONSTRAINT_NAME";
+
+        var rows = await QueryAsync<dynamic>(connection, sql, new { SelectedTables = selectedTables }, cancellationToken);
+
+        var grouped = rows.GroupBy(r => new { Name = (string)r.Name, SchemaName = (string)r.SchemaName, TableName = (string)r.TableName });
+
+        return grouped.Select(g =>
+        {
+            var first = g.First();
+            var columnNames = string.Join(",", g.Select(x => (string)x.ColumnName).Where(c => !string.IsNullOrEmpty(c)));
+            var referencedColumns = string.Join(",", g.Select(x => (string)x.ReferencedColumn).Where(c => !string.IsNullOrEmpty(c)));
+
+            return new ConstraintSchema
+            {
+                Name = first.Name,
+                SchemaName = first.SchemaName,
+                TableName = first.TableName,
+                ConstraintType = first.ConstraintType,
+                ColumnName = string.IsNullOrEmpty(columnNames) ? null : columnNames,
+                ReferencedTable = first.ReferencedTable,
+                ReferencedColumn = string.IsNullOrEmpty(referencedColumns) ? null : referencedColumns,
+                CheckClause = first.CheckClause
+            };
         }).ToList();
     }
 
     public override async Task<List<IndexSchema>> GetIndexesAsync(
         ConnectionProfile connection,
+        IReadOnlyCollection<string>? selectedTables = null,
         CancellationToken cancellationToken = default)
     {
-        const string sql = """
+        var sql = """
             SELECT
                 i.name              AS Name,
                 s.name              AS SchemaName,
@@ -330,24 +436,28 @@ public class SqlServerProvider : BaseDatabaseProvider
                 i.is_primary_key    AS IsPrimaryKey,
                 i.is_disabled       AS IsDisabled,
                 CASE i.index_id WHEN 1 THEN 1 ELSE 0 END AS IsClustered,
-                STRING_AGG(c.name, ',')
-                    WITHIN GROUP (ORDER BY ic.key_ordinal) AS Columns
+                STUFF((
+                    SELECT ',' + col.name
+                    FROM sys.index_columns ic
+                    JOIN sys.columns col ON col.object_id = ic.object_id AND col.column_id = ic.column_id
+                    WHERE ic.object_id = i.object_id AND ic.index_id = i.index_id
+                    ORDER BY ic.key_ordinal
+                    FOR XML PATH('')), 1, 1, '') AS Columns
             FROM sys.indexes i
             JOIN sys.tables t       ON t.object_id = i.object_id
             JOIN sys.schemas s      ON s.schema_id = t.schema_id
-            JOIN sys.index_columns ic ON ic.object_id = i.object_id
-                AND ic.index_id = i.index_id
-            JOIN sys.columns c      ON c.object_id = ic.object_id
-                AND c.column_id = ic.column_id
             WHERE i.name IS NOT NULL
               AND t.is_ms_shipped = 0
-            GROUP BY i.name, s.name, t.name, i.type_desc,
-                     i.is_unique, i.is_primary_key,
-                     i.is_disabled, i.index_id
-            ORDER BY s.name, t.name, i.name
             """;
 
-        var rows = await QueryAsync<dynamic>(connection, sql, cancellationToken: cancellationToken);
+        if (selectedTables != null && selectedTables.Count > 0)
+        {
+            sql += " AND (s.name + '.' + t.name) IN @SelectedTables ";
+        }
+
+        sql += " ORDER BY s.name, t.name, i.name";
+
+        var rows = await QueryAsync<dynamic>(connection, sql, new { SelectedTables = selectedTables }, cancellationToken);
 
         return rows.Select(r => new IndexSchema
         {
