@@ -1,5 +1,6 @@
 namespace DatabaseAuditor.WPF;
 
+using DatabaseAuditor.Application.Services;
 using DatabaseAuditor.WPF.Helpers;
 using DatabaseAuditor.WPF.ViewModels;
 using DatabaseAuditor.WPF.ViewModels.Dialogs;
@@ -11,29 +12,31 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddWpf(this IServiceCollection services)
     {
-        // Views
+        // Services
+        services.AddSingleton<IDialogService, DialogService>();
+
+        // Main window
         services.AddSingleton<MainWindow>();
-        services.AddTransient<CompareView>();
-        services.AddTransient<ConnectionsView>();
-        services.AddTransient<DashboardView>();
-        services.AddTransient<ReportsView>();
-        services.AddTransient<ResultsView>();
-        services.AddTransient<SettingsView>();
-        services.AddTransient<AboutDialog>();
-        services.AddTransient<AddConnectionDialog>();
 
         // ViewModels
         services.AddSingleton<MainViewModel>();
-        services.AddSingleton<CompareViewModel>();
-        services.AddTransient<ConnectionsViewModel>();
         services.AddSingleton<DashboardViewModel>();
-        services.AddSingleton<ReportsViewModel>();
+        services.AddSingleton<ConnectionsViewModel>();
+        services.AddSingleton<CompareViewModel>();
         services.AddSingleton<ResultsViewModel>();
-        services.AddTransient<SettingsViewModel>();
+        services.AddSingleton<ReportsViewModel>();
+        services.AddSingleton<SettingsViewModel>();
+
+        // Dialog ViewModels (transient — new each time)
         services.AddTransient<AddConnectionViewModel>();
 
-        // Services
-        services.AddSingleton<IDialogService, DialogService>();
+        // Views
+        services.AddSingleton<DashboardView>();
+        services.AddSingleton<ConnectionsView>();
+        services.AddSingleton<CompareView>();
+        services.AddSingleton<ResultsView>();
+        services.AddSingleton<ReportsView>();
+        services.AddSingleton<SettingsView>();
 
         return services;
     }

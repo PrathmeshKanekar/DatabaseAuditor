@@ -23,29 +23,16 @@
                 Fill="Transparent"/>
 
             <!-- Spinning Arc -->
-            <Path x:Name="SpinnerArc"
+            <Ellipse x:Name="SpinnerArc"
                   Stroke="{DynamicResource AccentBrush}"
                   StrokeThickness="3"
-                  StrokeStartLineCap="Round"
-                  StrokeEndLineCap="Round"
+                  StrokeDashArray="3,1"
                   Fill="Transparent"
                   RenderTransformOrigin="0.5,0.5">
-                <Path.Data>
-                    <PathGeometry>
-                        <PathFigure StartPoint="18,3" IsClosed="False">
-                            <ArcSegment
-                                Point="33,18"
-                                Size="15,15"
-                                SweepDirection="Clockwise"
-                                IsLargeArc="False"/>
-                        </PathFigure>
-                    </PathGeometry>
-                </Path.Data>
-                <Path.RenderTransform>
-                    <RotateTransform x:Name="SpinRotate" Angle="0"
-                                     CenterX="18" CenterY="18"/>
-                </Path.RenderTransform>
-            </Path>
+                <Ellipse.RenderTransform>
+                    <RotateTransform x:Name="SpinRotate" Angle="0"/>
+                </Ellipse.RenderTransform>
+            </Ellipse>
         </Grid>
 
         <!-- Message -->

@@ -93,6 +93,7 @@
 
     <SolidColorBrush x:Key="GridHeaderBgBrush"       Color="{StaticResource GridHeaderBgColor}"/>
     <SolidColorBrush x:Key="GridRowAltBrush"         Color="{StaticResource GridRowAltColor}"/>
+    <SolidColorBrush x:Key="GridRowHoverBrush"       Color="#FF333335"/>
     <SolidColorBrush x:Key="GridSelectionBrush"      Color="{StaticResource GridSelectionColor}"/>
     <SolidColorBrush x:Key="GridBorderBrush"         Color="{StaticResource GridBorderColor}"/>
 

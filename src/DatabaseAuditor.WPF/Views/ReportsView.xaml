@@ -4,14 +4,17 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:local="clr-namespace:DatabaseAuditor.WPF.Views"
+             xmlns:controls="clr-namespace:DatabaseAuditor.WPF.Controls"
+             xmlns:helpers="clr-namespace:DatabaseAuditor.WPF.Helpers"
              mc:Ignorable="d" 
              Padding="24"
-             d:DesignHeight="700" d:DesignWidth="1000">
+             d:DesignHeight="700" d:DesignWidth="1000"
+             Background="{DynamicResource BackgroundBrush}">
     <Grid>
         <!-- Main Workspace (When session is loaded) -->
         <ScrollViewer Visibility="{Binding HasSession, Converter={StaticResource BoolToVisibilityConverter}}"
-                      VerticalScrollBarVisibility="Auto"
-                      HorizontalScrollBarVisibility="Disabled">
+                       VerticalScrollBarVisibility="Auto"
+                       HorizontalScrollBarVisibility="Disabled">
             <Grid Margin="0,0,0,12">
                 <Grid.RowDefinitions>
                     <!-- Title Header -->
@@ -43,10 +46,10 @@
                         <StackPanel>
                             <TextBlock Text="Report Formats &amp; Outputs" Style="{DynamicResource SectionHeaderStyle}" Margin="0,0,0,12"/>
                             
-                            <CheckBox IsChecked="{Binding ExportExcel}" Content="Export Excel Worksheet (.xlsx)" Style="{DynamicResource CheckBoxStyle}" Margin="0,0,0,4"/>
+                            <CheckBox TabIndex="1" IsChecked="{Binding ExportExcel}" Content="Export Excel Worksheet (.xlsx)" Style="{StaticResource ModernCheckBoxStyle}" Margin="0,0,0,4"/>
                             <TextBlock Text="Detailed database schema audit spreadsheet, perfect for data analysis." Style="{DynamicResource TextCaption}" Margin="24,0,0,12"/>
                             
-                            <CheckBox IsChecked="{Binding ExportPdf}" Content="Export PDF Summary (.pdf)" Style="{DynamicResource CheckBoxStyle}" Margin="0,0,0,4"/>
+                            <CheckBox TabIndex="2" IsChecked="{Binding ExportPdf}" Content="Export PDF Summary (.pdf)" Style="{StaticResource ModernCheckBoxStyle}" Margin="0,0,0,4"/>
                             <TextBlock Text="Polished document summarizing audit stats and changes." Style="{DynamicResource TextCaption}" Margin="24,0,0,16"/>
 
                             <Separator Margin="0,0,0,16"/>
@@ -60,8 +63,8 @@
                                         <ColumnDefinition Width="8" />
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
-                                    <TextBox Grid.Column="0" Text="{Binding OutputDirectory}" Style="{DynamicResource TextBoxStyle}" Padding="10,6" IsReadOnly="True"/>
-                                    <Button Grid.Column="2" Command="{Binding BrowseOutputDirectoryCommand}" Style="{DynamicResource ButtonStyle}" Content="Browse..." Padding="12,6"/>
+                                    <TextBox TabIndex="3" Grid.Column="0" Text="{Binding OutputDirectory}" Style="{StaticResource ModernTextBoxStyle}" Padding="10,6" IsReadOnly="True" Height="34"/>
+                                    <Button Grid.Column="2" TabIndex="4" Command="{Binding BrowseOutputDirectoryCommand}" Style="{StaticResource SecondaryButtonStyle}" Content="Browse..." Padding="12,0" Height="34"/>
                                 </Grid>
                             </StackPanel>
                         </StackPanel>
@@ -145,7 +148,7 @@
                     <!-- Progress bar -->
                     <StackPanel Visibility="{Binding IsGenerating, Converter={StaticResource BoolToVisibilityConverter}}" Margin="0,16,0,0">
                         <TextBlock Text="{Binding ProgressMessage}" Style="{DynamicResource TextCaption}" Margin="0,0,0,8"/>
-                        <ProgressBar Value="{Binding ProgressValue}" Height="10" Background="{DynamicResource SurfaceBrush}" BorderThickness="0"/>
+                        <ProgressBar Value="{Binding ProgressValue}" Height="10" Background="{DynamicResource SurfaceBrush}" BorderThickness="0" Maximum="100"/>
                     </StackPanel>
 
                     <!-- Feedback alerts -->
@@ -170,13 +173,13 @@
                             
                             <!-- Open output links -->
                             <StackPanel Grid.Column="0" Orientation="Horizontal">
-                                <Button Command="{Binding OpenExcelReportCommand}" Style="{DynamicResource ButtonStyle}" Content="Open Excel File" IsEnabled="{Binding HasExcelOutput}" Margin="0,0,8,0"/>
-                                <Button Command="{Binding OpenPdfReportCommand}" Style="{DynamicResource ButtonStyle}" Content="Open PDF File" IsEnabled="{Binding HasPdfOutput}" Margin="0,0,8,0"/>
-                                <Button Command="{Binding OpenOutputDirectoryCommand}" Style="{DynamicResource ButtonStyle}" Content="Open Folder"/>
+                                <Button TabIndex="5" Command="{Binding OpenExcelReportCommand}" Style="{StaticResource SecondaryButtonStyle}" Content="Open Excel File" IsEnabled="{Binding HasExcelOutput}" Margin="0,0,8,0" Height="36" Padding="16,0"/>
+                                <Button TabIndex="6" Command="{Binding OpenPdfReportCommand}" Style="{StaticResource SecondaryButtonStyle}" Content="Open PDF File" IsEnabled="{Binding HasPdfOutput}" Margin="0,0,8,0" Height="36" Padding="16,0"/>
+                                <Button TabIndex="7" Command="{Binding OpenOutputDirectoryCommand}" Style="{StaticResource SecondaryButtonStyle}" Content="Open Folder" Height="36" Padding="16,0"/>
                             </StackPanel>
 
                             <!-- Generate button -->
-                            <Button Grid.Column="2" Command="{Binding GenerateReportsCommand}" Style="{DynamicResource ButtonStyle}" Content="Generate Reports" Background="{DynamicResource AccentBrush}" Foreground="White" Width="160" Height="36"
+                            <Button Grid.Column="2" TabIndex="8" Command="{Binding GenerateReportsCommand}" Style="{StaticResource PrimaryButtonStyle}" Content="Generate Reports" Width="160" Height="36"
                                     Visibility="{Binding IsGenerating, Converter={StaticResource InverseBoolToVisibilityConverter}}"/>
                         </Grid>
                     </Border>
