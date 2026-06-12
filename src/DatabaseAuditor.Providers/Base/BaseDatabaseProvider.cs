@@ -146,4 +146,25 @@ public abstract class BaseDatabaseProvider : IDatabaseProvider
         ConnectionProfile connection,
         IReadOnlyCollection<string>? selectedTables = null,
         CancellationToken cancellationToken = default);
+
+    public virtual async Task ExecuteSqlAsync(
+        ConnectionProfile connection,
+        string sql,
+        CancellationToken cancellationToken = default)
+    {
+        Serilog.Log.Information("Executing SQL on {Database}: {Sql}", connection.DatabaseName, sql);
+        using var conn = CreateConnection(connection);
+        if (conn is System.Data.Common.DbConnection dbConn)
+        {
+            if (dbConn.State != ConnectionState.Open)
+                await dbConn.OpenAsync(cancellationToken);
+        }
+        else
+        {
+            if (conn.State != ConnectionState.Open)
+                conn.Open();
+        }
+        var command = new CommandDefinition(sql, cancellationToken: cancellationToken);
+        await conn.ExecuteAsync(command);
+    }
 }

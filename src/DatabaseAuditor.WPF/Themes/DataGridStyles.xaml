@@ -143,7 +143,7 @@
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter TargetName="Root"
                                     Property="Background"
-                                    Value="{DynamicResource NavItemHoverBrush}"/>
+                                    Value="{DynamicResource GridRowHoverBrush}"/>
                         </Trigger>
                         <Trigger Property="IsSelected" Value="True">
                             <Setter TargetName="Root"

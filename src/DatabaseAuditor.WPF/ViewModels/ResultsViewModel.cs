@@ -1,211 +1,391 @@
+using System.Linq;
+using DatabaseAuditor.Application.UseCases.SyncColumns;
+
 namespace DatabaseAuditor.WPF.ViewModels;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using DatabaseAuditor.Domain.Enums;
 using DatabaseAuditor.Domain.ValueObjects;
-using DatabaseAuditor.WPF.Helpers;
-using DocumentFormat.OpenXml.Office.SpreadSheetML.Y2023.DataSourceVersioning;
-using Serilog;
 using System.Collections.ObjectModel;
-using System.ComponentModel;
-using System.Windows.Data;
 
 public partial class ResultsViewModel : ObservableObject
 {
-    private readonly IDialogService _dialogService;
-    private CompareSession? _currentSession;
-    private List<CompareResult> _allResults = [];
+    private readonly SyncColumnsHandler _syncHandler;
 
-    [ObservableProperty]
-    private ObservableCollection<CompareResult> _results = [];
-
-    [ObservableProperty]
-    private ICollectionView? _resultsView;
-
-    [ObservableProperty]
-    private CompareResult? _selectedResult;
-
-    [ObservableProperty]
-    private string _searchText = string.Empty;
-
-    [ObservableProperty]
-    private bool _showAdded = true;
-
-    [ObservableProperty]
-    private bool _showDeleted = true;
-
-    [ObservableProperty]
-    private bool _showModified = true;
-
-    [ObservableProperty]
-    private bool _showUnchanged = true;
-
-    [ObservableProperty]
-    private int _totalCount;
-
-    [ObservableProperty]
-    private int _addedCount;
-
-    [ObservableProperty]
-    private int _deletedCount;
-
-    [ObservableProperty]
-    private int _modifiedCount;
-
-    [ObservableProperty]
-    private int _unchangedCount;
-
-    [ObservableProperty]
-    private int _filteredCount;
-
-    [ObservableProperty]
-    private bool _hasResults;
-
-    [ObservableProperty]
-    private bool _isLoading;
-
-    [ObservableProperty]
-    private string _sessionInfo = string.Empty;
-
-    [ObservableProperty]
-    private string _executionTime = string.Empty;
-
-    public event EventHandler? ExportRequested;
-
-    public ResultsViewModel(IDialogService dialogService)
+    public ResultsViewModel(SyncColumnsHandler syncHandler)
     {
-        _dialogService = dialogService;
+        _syncHandler = syncHandler;
+    }
+    [ObservableProperty] private int _totalObjects;
+    [ObservableProperty] private int _addedCount;
+    [ObservableProperty] private int _deletedCount;
+    [ObservableProperty] private int _modifiedCount;
+    [ObservableProperty] private int _unchangedCount;
+
+    [ObservableProperty] private string _sourceLabel = string.Empty;
+    [ObservableProperty] private string _targetLabel = string.Empty;
+    [ObservableProperty] private string _compareTypeLabel = string.Empty;
+    [ObservableProperty] private string _executionTime = string.Empty;
+    [ObservableProperty] private bool _isSuccess;
+    [ObservableProperty] private string _errorMessage = string.Empty;
+    [ObservableProperty] private bool _hasResults;
+
+    [ObservableProperty] private string _filterText = string.Empty;
+    [ObservableProperty] private string _filterChangeType = "All";
+    [ObservableProperty] private string _filterObjectType = "All";
+
+    [ObservableProperty] private CompareResult? _selectedResult;
+    [ObservableProperty] private bool _showDiffPanel;
+
+    public ObservableCollection<CompareResult> Results { get; } = [];
+    public ObservableCollection<CompareResult> FilteredResults { get; } = [];
+    public ObservableCollection<DiffLine> DiffLines { get; } = [];
+
+    public List<string> ChangeTypeFilters { get; } =
+        ["All", "Added", "Deleted", "Modified", "Unchanged"];
+
+    public List<string> ObjectTypeFilters { get; } =
+        ["All", "Table", "Column", "Procedure", "View", "Function", "Trigger", "Constraint", "Index"];
+
+    public static List<CompareResult>? LastFilteredResults { get; private set; }
+
+    partial void OnFilterTextChanged(string value) => ApplyFilter();
+    partial void OnFilterChangeTypeChanged(string value) => ApplyFilter();
+    partial void OnFilterObjectTypeChanged(string value) => ApplyFilter();
+
+    partial void OnSelectedResultChanged(CompareResult? value)
+    {
+        if (value == null)
+        {
+            ShowDiffPanel = false;
+            return;
+        }
+
+        ShowDiffPanel = value.ChangeType == ChangeType.Modified || value.Differences.Count > 0;
+        BuildDiffView(value);
     }
 
-    partial void OnSearchTextChanged(string value) => ApplyFilter();
-    partial void OnShowAddedChanged(bool value) => ApplyFilter();
-    partial void OnShowDeletedChanged(bool value) => ApplyFilter();
-    partial void OnShowModifiedChanged(bool value) => ApplyFilter();
-    partial void OnShowUnchangedChanged(bool value) => ApplyFilter();
-
-    public void LoadSession(CompareSession session)
+    public Task LoadFromSessionAsync()
     {
-        _currentSession = session;
-        _allResults = session.Results;
+        var session = CompareViewModel.LastSession;
+        if (session == null) return Task.CompletedTask;
 
-        Log.Information("ResultsViewModel Loaded Results: {Count}", session.Results.Count);
+        HasResults = true;
+        SourceLabel = $"[{session.Source.Environment}] {session.Source.Name}";
+        TargetLabel = $"[{session.Target.Environment}] {session.Target.Name}";
+        CompareTypeLabel = session.CompareType.ToString();
+        ExecutionTime = $"{session.ExecutionTime.TotalSeconds:F2}s";
+        IsSuccess = session.IsSuccess;
+        ErrorMessage = session.ErrorMessage ?? string.Empty;
 
-        TotalCount = session.TotalObjects;
+        TotalObjects = session.TotalObjects;
         AddedCount = session.AddedCount;
         DeletedCount = session.DeletedCount;
         ModifiedCount = session.ModifiedCount;
         UnchangedCount = session.UnchangedCount;
-        HasResults = session.TotalObjects > 0;
 
-        SessionInfo = $"{session.Source.DisplayName}  →  {session.Target.DisplayName}" +
-                      $"  |  {session.CompareType}";
-
-        ExecutionTime = $"Completed in {session.ExecutionTime.TotalSeconds:F2}s  " +
-                        $"on {session.CompletedAt:yyyy-MM-dd HH:mm:ss}";
+        Results.Clear();
+        foreach (var r in session.Results) Results.Add(r);
 
         ApplyFilter();
-
-        Log.Information("[Results] Session loaded. Total={Total} Filtered={Filtered}", TotalCount, FilteredCount);
-    }
-
-    [RelayCommand]
-    private void Refresh()
-    {
-        if (_currentSession != null)
-            LoadSession(_currentSession);
-    }
-
-    [RelayCommand]
-    private void ClearFilters()
-    {
-        SearchText = string.Empty;
-        ShowAdded = true;
-        ShowDeleted = true;
-        ShowModified = true;
-        ShowUnchanged = false;
-    }
-
-    [RelayCommand]
-    private void ExportResults()
-    {
-        if (_currentSession == null)
-        {
-            _dialogService.ShowInfo("No Results", "No comparison results to export.");
-            return;
-        }
-
-        ExportRequested?.Invoke(this, EventArgs.Empty);
-    }
-
-    [RelayCommand]
-    private void CopySelectedRow()
-    {
-        if (SelectedResult == null) return;
-
-        var text = $"{SelectedResult.ObjectType}\t" +
-                   $"{SelectedResult.SchemaName}\t" +
-                   $"{SelectedResult.ObjectName}\t" +
-                   $"{SelectedResult.ChangeType}\t" +
-                   $"{SelectedResult.Status}";
-
-        System.Windows.Clipboard.SetText(text);
-        Log.Information("[Results] Row copied to clipboard");
+        OnPropertyChanged(nameof(HasSyncableResults));
+        return Task.CompletedTask;
     }
 
     private void ApplyFilter()
     {
-        IsLoading = true;
+        FilteredResults.Clear();
+        var query = Results.AsEnumerable();
 
-        try
+        if (!string.IsNullOrWhiteSpace(FilterText))
         {
-            var filtered = _allResults.AsEnumerable();
+            var search = FilterText.Trim().ToLowerInvariant();
+            query = query.Where(r =>
+                r.ObjectName.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+                r.SchemaName.Contains(search, StringComparison.OrdinalIgnoreCase));
+        }
 
-            // Change type filters
-            filtered = filtered.Where(r =>
-                (ShowAdded && r.ChangeType == ChangeType.Added) ||
-                (ShowDeleted && r.ChangeType == ChangeType.Deleted) ||
-                (ShowModified && r.ChangeType == ChangeType.Modified) ||
-                (ShowUnchanged && r.ChangeType == ChangeType.Unchanged));
+        if (FilterChangeType != "All" && Enum.TryParse<ChangeType>(FilterChangeType, out var ct))
+            query = query.Where(r => r.ChangeType == ct);
 
-            // Search
-            if (!string.IsNullOrWhiteSpace(SearchText))
+        if (FilterObjectType != "All" && Enum.TryParse<CompareType>(FilterObjectType, out var ot))
+            query = query.Where(r => r.ObjectType == ot);
+
+        // Sort: Modified > Added > Deleted > Unchanged
+        query = query.OrderBy(r => r.ChangeType switch
+        {
+            ChangeType.Modified => 0,
+            ChangeType.Added => 1,
+            ChangeType.Deleted => 2,
+            _ => 3
+        }).ThenBy(r => r.ObjectType)
+          .ThenBy(r => r.FullObjectName);
+
+        var list = query.ToList();
+        foreach (var r in list) FilteredResults.Add(r);
+        LastFilteredResults = list;
+    }
+
+    private void BuildDiffView(CompareResult result)
+    {
+        DiffLines.Clear();
+
+        if (result.ChangeType == ChangeType.Added)
+        {
+            DiffLines.Add(new DiffLine
             {
-                var search = SearchText.Trim();
-                filtered = filtered.Where(r =>
-                    r.ObjectName.Contains(search, StringComparison.OrdinalIgnoreCase) ||
-                    r.SchemaName.Contains(search, StringComparison.OrdinalIgnoreCase) ||
-                    r.ObjectType.ToString().Contains(search, StringComparison.OrdinalIgnoreCase) ||
-                    r.ChangeType.ToString().Contains(search, StringComparison.OrdinalIgnoreCase) ||
-                    (r.SourceValue?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false) ||
-                    (r.TargetValue?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false));
+                Type = DiffLineType.Added,
+                SourceLine = result.SourceValue ?? result.ObjectName,
+                TargetLine = "Missing",
+                LineNumber = 1
+            });
+            return;
+        }
+
+        if (result.ChangeType == ChangeType.Deleted)
+        {
+            DiffLines.Add(new DiffLine
+            {
+                Type = DiffLineType.Removed,
+                SourceLine = "Missing",
+                TargetLine = result.TargetValue ?? result.ObjectName,
+                LineNumber = 1
+            });
+            return;
+        }
+
+        // Modified — show each difference as a diff line
+        int lineNo = 1;
+        foreach (var diff in result.Differences)
+        {
+            // Check for missing parameter message, e.g. "Parameter '@myParam' is missing in Target on line 15"
+            // or "Parameter '@myParam' is missing in Source on line 15"
+            if (diff.Contains("is missing in Target"))
+            {
+                string paramName = string.Empty;
+                string lineInfo = string.Empty;
+
+                var match = System.Text.RegularExpressions.Regex.Match(diff, @"Parameter '([^']+)' is missing in Target(?: on line (\d+))?");
+                if (match.Success)
+                {
+                    paramName = match.Groups[1].Value;
+                    if (match.Groups[2].Success)
+                    {
+                        lineInfo = $" (line {match.Groups[2].Value})";
+                    }
+                }
+                else
+                {
+                    paramName = diff;
+                }
+
+                DiffLines.Add(new DiffLine
+                {
+                    Type = DiffLineType.Removed,
+                    SourceLine = $"Parameter '{paramName}'{lineInfo}",
+                    TargetLine = "Missing",
+                    LineNumber = lineNo++
+                });
+                continue;
+            }
+            else if (diff.Contains("is missing in Source"))
+            {
+                string paramName = string.Empty;
+                string lineInfo = string.Empty;
+
+                var match = System.Text.RegularExpressions.Regex.Match(diff, @"Parameter '([^']+)' is missing in Source(?: on line (\d+))?");
+                if (match.Success)
+                {
+                    paramName = match.Groups[1].Value;
+                    if (match.Groups[2].Success)
+                    {
+                        lineInfo = $" (line {match.Groups[2].Value})";
+                    }
+                }
+                else
+                {
+                    paramName = diff;
+                }
+
+                DiffLines.Add(new DiffLine
+                {
+                    Type = DiffLineType.Added,
+                    SourceLine = "Missing",
+                    TargetLine = $"Parameter '{paramName}'{lineInfo}",
+                    LineNumber = lineNo++
+                });
+                continue;
             }
 
-            var list = filtered.ToList();
-            Results = new ObservableCollection<CompareResult>(list);
-            FilteredCount = list.Count;
+            // Parse "Property: OldValue -> NewValue" or "Property: OldValue → NewValue"
+            var parts = diff.Contains("→") 
+                ? diff.Split('→') 
+                : diff.Split(new[] { "->" }, StringSplitOptions.None);
 
-            // Set up CollectionView for sorting
-            ResultsView = CollectionViewSource.GetDefaultView(Results);
-            ResultsView.SortDescriptions.Add(
-                new SortDescription(nameof(CompareResult.ChangeType),
-                    ListSortDirection.Ascending));
-            ResultsView.SortDescriptions.Add(
-                new SortDescription(nameof(CompareResult.ObjectType),
-                    ListSortDirection.Ascending));
-            ResultsView.SortDescriptions.Add(
-                new SortDescription(nameof(CompareResult.ObjectName),
-                    ListSortDirection.Ascending));
-        }
-        catch (Exception ex)
-        {
-            Log.Error(ex, "[Results] Filter failed");
-        }
-        finally
-        {
-            IsLoading = false;
+            if (parts.Length == 2)
+            {
+                var propAndOld = parts[0].Trim();
+                var newVal = parts[1].Trim();
+
+                // Split prop from old value at last ':'
+                var colonIdx = propAndOld.LastIndexOf(':');
+                var prop = colonIdx >= 0 ? propAndOld[..colonIdx].Trim() : propAndOld;
+                var oldVal = colonIdx >= 0 ? propAndOld[(colonIdx + 1)..].Trim() : string.Empty;
+
+                DiffLines.Add(new DiffLine
+                {
+                    Type = DiffLineType.Context,
+                    SourceLine = $"-- {prop}",
+                    TargetLine = $"-- {prop}",
+                    LineNumber = lineNo++
+                });
+                DiffLines.Add(new DiffLine
+                {
+                    Type = DiffLineType.Removed,
+                    SourceLine = oldVal,
+                    TargetLine = string.Empty,
+                    LineNumber = lineNo++
+                });
+                DiffLines.Add(new DiffLine
+                {
+                    Type = DiffLineType.Added,
+                    SourceLine = string.Empty,
+                    TargetLine = newVal,
+                    LineNumber = lineNo++
+                });
+            }
+            else
+            {
+                DiffLines.Add(new DiffLine
+                {
+                    Type = DiffLineType.Modified,
+                    SourceLine = diff,
+                    TargetLine = diff,
+                    LineNumber = lineNo++
+                });
+            }
         }
     }
 
-    public CompareSession? GetCurrentSession() => _currentSession;
+    [RelayCommand]
+    public void ClearFilter()
+    {
+        FilterText = string.Empty;
+        FilterChangeType = "All";
+        FilterObjectType = "All";
+    }
+
+    [RelayCommand]
+    public void NavigateToReports()
+    {
+        if (System.Windows.Application.Current.MainWindow is MainWindow mainWindow)
+        {
+            mainWindow.NavigateToReports();
+        }
+    }
+
+    public bool HasSyncableResults => Results.Any(r => !string.IsNullOrEmpty(r.SyncScript));
+
+    private bool _allSelected = false;
+
+    [RelayCommand]
+    public void ToggleSelectAll()
+    {
+        _allSelected = !_allSelected;
+        foreach (var r in FilteredResults)
+        {
+            if (!string.IsNullOrEmpty(r.SyncScript))
+            {
+                r.IsSelected = _allSelected;
+            }
+        }
+        ApplyFilter();
+    }
+
+    [RelayCommand]
+    public async Task SyncSelectedAsync()
+    {
+        var toSync = Results.Where(r => r.IsSelected && !string.IsNullOrEmpty(r.SyncScript)).ToList();
+        if (toSync.Count == 0)
+        {
+            System.Windows.MessageBox.Show(
+                "Please select one or more columns to synchronize by checking the boxes in the grid.",
+                "No Columns Selected",
+                System.Windows.MessageBoxButton.OK,
+                System.Windows.MessageBoxImage.Warning);
+            return;
+        }
+
+        var session = CompareViewModel.LastSession;
+        if (session == null) return;
+
+        var result = System.Windows.MessageBox.Show(
+            $"Are you sure you want to synchronize the {toSync.Count} selected column(s) to the target database?\nThis will execute ALTER TABLE statements and modify the target database schema.",
+            "Confirm Schema Synchronization",
+            System.Windows.MessageBoxButton.YesNo,
+            System.Windows.MessageBoxImage.Question);
+
+        if (result != System.Windows.MessageBoxResult.Yes) return;
+
+        try
+        {
+            var syncCommand = new SyncColumnsCommand
+            {
+                TargetConnectionId = session.Target.Id,
+                SyncScripts = toSync.Select(s => s.SyncScript!).ToList()
+            };
+
+            await _syncHandler.HandleAsync(syncCommand);
+
+            System.Windows.MessageBox.Show(
+                "Successfully synchronized the selected columns to the target database!",
+                "Sync Complete",
+                System.Windows.MessageBoxButton.OK,
+                System.Windows.MessageBoxImage.Information);
+
+            // Update local state to reflect that they are now synchronized (Unchanged)
+            foreach (var item in toSync)
+            {
+                item.ChangeType = ChangeType.Unchanged;
+                item.Status = ObjectStatus.Match;
+                item.SyncScript = null;
+                item.IsSelected = false;
+            }
+
+            // Recalculate summary metrics
+            AddedCount = Results.Count(r => r.ChangeType == ChangeType.Added);
+            UnchangedCount = Results.Count(r => r.ChangeType == ChangeType.Unchanged);
+            TotalObjects = Results.Count;
+
+            ApplyFilter();
+            OnPropertyChanged(nameof(HasSyncableResults));
+        }
+        catch (Exception ex)
+        {
+            System.Windows.MessageBox.Show(
+                $"Failed to synchronize columns: {ex.Message}",
+                "Synchronization Error",
+                System.Windows.MessageBoxButton.OK,
+                System.Windows.MessageBoxImage.Error);
+        }
+    }
+}
+
+public enum DiffLineType { Context, Added, Removed, Modified }
+
+public class DiffLine
+{
+    public int LineNumber { get; set; }
+    public DiffLineType Type { get; set; }
+    public string SourceLine { get; set; } = string.Empty;
+    public string TargetLine { get; set; } = string.Empty;
+
+    public string TypeLabel => Type switch
+    {
+        DiffLineType.Added => "+",
+        DiffLineType.Removed => "-",
+        DiffLineType.Modified => "~",
+        _ => " "
+    };
 }

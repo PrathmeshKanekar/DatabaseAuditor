@@ -30,7 +30,7 @@
                     <!-- Profile Name -->
                     <StackPanel Margin="0,0,0,16">
                         <TextBlock Text="Profile Name" Style="{DynamicResource TextCaption}" FontWeight="SemiBold" Margin="0,0,0,6"/>
-                        <TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" Style="{DynamicResource TextBoxStyle}" Padding="10,6"/>
+                        <TextBox TabIndex="1" Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" Style="{DynamicResource TextBoxStyle}" Padding="10,6"/>
                     </StackPanel>
 
                     <!-- Type & Environment Grid -->
@@ -44,7 +44,7 @@
                         <!-- DB Type -->
                         <StackPanel Grid.Column="0">
                             <TextBlock Text="Database Type" Style="{DynamicResource TextCaption}" FontWeight="SemiBold" Margin="0,0,0,6"/>
-                            <ComboBox ItemsSource="{Binding DatabaseTypes}"
+                            <ComboBox TabIndex="2" ItemsSource="{Binding DatabaseTypes}"
                                       SelectedItem="{Binding SelectedDatabaseType}"
                                       Style="{DynamicResource ComboBoxStyle}"
                                       Padding="10,6"/>
@@ -53,7 +53,7 @@
                         <!-- Environment -->
                         <StackPanel Grid.Column="2">
                             <TextBlock Text="Environment" Style="{DynamicResource TextCaption}" FontWeight="SemiBold" Margin="0,0,0,6"/>
-                            <ComboBox ItemsSource="{Binding Environments}"
+                            <ComboBox TabIndex="3" ItemsSource="{Binding Environments}"
                                       SelectedItem="{Binding SelectedEnvironment}"
                                       Style="{DynamicResource ComboBoxStyle}"
                                       Padding="10,6"/>
@@ -71,20 +71,20 @@
                         <!-- Server -->
                         <StackPanel Grid.Column="0">
                             <TextBlock Text="Server Host / IP" Style="{DynamicResource TextCaption}" FontWeight="SemiBold" Margin="0,0,0,6"/>
-                            <TextBox Text="{Binding Server, UpdateSourceTrigger=PropertyChanged}" Style="{DynamicResource TextBoxStyle}" Padding="10,6"/>
+                            <TextBox TabIndex="4" Text="{Binding Server, UpdateSourceTrigger=PropertyChanged}" Style="{DynamicResource TextBoxStyle}" Padding="10,6"/>
                         </StackPanel>
 
                         <!-- Port -->
                         <StackPanel Grid.Column="2">
                             <TextBlock Text="Port" Style="{DynamicResource TextCaption}" FontWeight="SemiBold" Margin="0,0,0,6"/>
-                            <TextBox Text="{Binding Port, UpdateSourceTrigger=PropertyChanged}" Style="{DynamicResource TextBoxStyle}" Padding="10,6"/>
+                            <TextBox TabIndex="5" Text="{Binding Port, UpdateSourceTrigger=PropertyChanged}" Style="{DynamicResource TextBoxStyle}" Padding="10,6"/>
                         </StackPanel>
                     </Grid>
 
                     <!-- Database Name -->
                     <StackPanel Margin="0,0,0,16">
                         <TextBlock Text="Database Name / SID" Style="{DynamicResource TextCaption}" FontWeight="SemiBold" Margin="0,0,0,6"/>
-                        <TextBox Text="{Binding DatabaseName, UpdateSourceTrigger=PropertyChanged}" Style="{DynamicResource TextBoxStyle}" Padding="10,6"/>
+                        <TextBox TabIndex="6" Text="{Binding DatabaseName, UpdateSourceTrigger=PropertyChanged}" Style="{DynamicResource TextBoxStyle}" Padding="10,6"/>
                     </StackPanel>
 
                     <!-- Credentials Grid -->
@@ -98,13 +98,13 @@
                         <!-- Username -->
                         <StackPanel Grid.Column="0">
                             <TextBlock Text="Username" Style="{DynamicResource TextCaption}" FontWeight="SemiBold" Margin="0,0,0,6"/>
-                            <TextBox Text="{Binding Username, UpdateSourceTrigger=PropertyChanged}" Style="{DynamicResource TextBoxStyle}" Padding="10,6"/>
+                            <TextBox TabIndex="7" Text="{Binding Username, UpdateSourceTrigger=PropertyChanged}" Style="{DynamicResource TextBoxStyle}" Padding="10,6"/>
                         </StackPanel>
 
                         <!-- Password -->
                         <StackPanel Grid.Column="2">
                             <TextBlock Text="Password" Style="{DynamicResource TextCaption}" FontWeight="SemiBold" Margin="0,0,0,6"/>
-                            <PasswordBox x:Name="PasswordInput" Style="{DynamicResource PasswordBoxStyle}" Padding="10,6"/>
+                            <PasswordBox TabIndex="8" x:Name="PasswordInput" Style="{DynamicResource PasswordBoxStyle}" Padding="10,6"/>
                         </StackPanel>
                     </Grid>
                 </StackPanel>
@@ -118,8 +118,8 @@
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
                 
-                <Button Grid.Column="0" Click="Cancel_Click" Style="{DynamicResource ButtonStyle}" Content="Cancel" Width="100"/>
-                <Button Grid.Column="2" Click="Save_Click" Style="{DynamicResource ButtonStyle}" Content="Save Profile" Background="{DynamicResource AccentBrush}" Foreground="White" Width="120"/>
+                <Button Grid.Column="0" TabIndex="10" Click="Cancel_Click" Style="{DynamicResource ButtonStyle}" Content="Cancel" Width="100"/>
+                <Button Grid.Column="2" TabIndex="9" Click="Save_Click" Style="{DynamicResource ButtonStyle}" Content="Save Profile" Background="{DynamicResource AccentBrush}" Foreground="White" Width="120"/>
             </Grid>
         </Grid>
     </Border>

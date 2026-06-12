@@ -29,7 +29,7 @@ public partial class AddConnectionDialog : Window
 
     public void InitializeForEdit(ConnectionProfile profile)
     {
-        _viewModel.LoadFromProfile(profile);
+        _viewModel.LoadFrom(profile);
         PasswordInput.Password = profile.Password;
     }
 

@@ -109,13 +109,13 @@ public class CompareService : ICompareService
 
             if (hasSource && !hasTarget)
             {
-                results.Add(CreateMissingResult(sourceTable!, CompareType.Table, ChangeType.Deleted, ObjectStatus.MissingInTarget, key, null));
+                results.Add(CreateMissingResult(sourceTable!, CompareType.Table, ChangeType.Added, ObjectStatus.MissingInTarget, key, null));
                 continue;
             }
 
             if (!hasSource && hasTarget)
             {
-                results.Add(CreateMissingResult(targetTable!, CompareType.Table, ChangeType.Added, ObjectStatus.MissingInSource, null, key));
+                results.Add(CreateMissingResult(targetTable!, CompareType.Table, ChangeType.Deleted, ObjectStatus.MissingInSource, null, key));
                 continue;
             }
 
@@ -131,7 +131,8 @@ public class CompareService : ICompareService
                 c => $"{c.TableName}.{c.FullName}",
                 CompareType.Column,
                 (s, t) => GetColumnDifferences(s, t),
-                sourceTableValue.FullName));
+                sourceTableValue.FullName,
+                target.DatabaseType));
 
             results.AddRange(CompareChildObjects(
                 sourceTableValue.Constraints,
@@ -171,7 +172,9 @@ public class CompareService : ICompareService
             targetColumns,
             c => $"{c.TableName}.{c.FullName}",
             CompareType.Column,
-            (s, t) => GetColumnDifferences(s, t));
+            (s, t) => GetColumnDifferences(s, t),
+            c => string.IsNullOrEmpty(c.SchemaName) ? c.TableName : $"{c.SchemaName}.{c.TableName}",
+            target.DatabaseType);
     }
 
     private async Task<List<CompareResult>> CompareProceduresAsync(
@@ -276,7 +279,8 @@ public class CompareService : ICompareService
             targetConstraints,
             c => $"{c.TableName}.{c.FullName}",
             CompareType.Constraint,
-            (s, t) => GetConstraintDifferences(s, t));
+            (s, t) => GetConstraintDifferences(s, t),
+            c => string.IsNullOrEmpty(c.SchemaName) ? c.TableName : $"{c.SchemaName}.{c.TableName}");
     }
 
     private async Task<List<CompareResult>> CompareIndexesAsync(
@@ -297,7 +301,8 @@ public class CompareService : ICompareService
             targetIndexes,
             i => $"{i.TableName}.{i.FullName}",
             CompareType.Index,
-            (s, t) => GetIndexDifferences(s, t));
+            (s, t) => GetIndexDifferences(s, t),
+            i => string.IsNullOrEmpty(i.SchemaName) ? i.TableName : $"{i.SchemaName}.{i.TableName}");
     }
 
     private async Task<List<CompareResult>> CompareDatabaseAsync(
@@ -384,9 +389,10 @@ public class CompareService : ICompareService
         Func<T, string> keySelector,
         CompareType objectType,
         Func<T, T, List<string>> diffSelector,
-        string parentObject) where T : SchemaObject
+        string parentObject,
+        DatabaseType? targetDbType = null) where T : SchemaObject
     {
-        var results = CompareObjectLists(sourceList, targetList, keySelector, objectType, diffSelector);
+        var results = CompareObjectLists(sourceList, targetList, keySelector, objectType, diffSelector, targetDbType: targetDbType);
         foreach (var result in results)
             result.ParentObject = parentObject;
         return results;
@@ -416,7 +422,9 @@ public class CompareService : ICompareService
         List<T> targetList,
         Func<T, string> keySelector,
         CompareType objectType,
-        Func<T, T, List<string>> diffSelector) where T : SchemaObject
+        Func<T, T, List<string>> diffSelector,
+        Func<T, string>? parentSelector = null,
+        DatabaseType? targetDbType = null) where T : SchemaObject
     {
         var results = new List<CompareResult>();
         var sourceMap = ToSafeDictionary(sourceList, keySelector, x => x, StringComparer.OrdinalIgnoreCase);
@@ -428,20 +436,34 @@ public class CompareService : ICompareService
             var inSource = sourceMap.TryGetValue(key, out var sourceObj);
             var inTarget = targetMap.TryGetValue(key, out var targetObj);
 
+            CompareResult result;
             if (inSource && !inTarget)
             {
-                results.Add(CreateMissingResult(sourceObj!, objectType, ChangeType.Deleted, ObjectStatus.MissingInTarget, key, null));
+                result = CreateMissingResult(sourceObj!, objectType, ChangeType.Added, ObjectStatus.MissingInTarget, key, null);
+                if (parentSelector != null)
+                    result.ParentObject = parentSelector(sourceObj!);
+                if (objectType == CompareType.Column && targetDbType.HasValue && sourceObj is ColumnSchema colSchema)
+                {
+                    result.SyncScript = GenerateAddColumnSql(colSchema, targetDbType.Value);
+                }
+                results.Add(result);
                 continue;
             }
 
             if (!inSource && inTarget)
             {
-                results.Add(CreateMissingResult(targetObj!, objectType, ChangeType.Added, ObjectStatus.MissingInSource, null, key));
+                result = CreateMissingResult(targetObj!, objectType, ChangeType.Deleted, ObjectStatus.MissingInSource, null, key);
+                if (parentSelector != null)
+                    result.ParentObject = parentSelector(targetObj!);
+                results.Add(result);
                 continue;
             }
 
             var diffs = diffSelector(sourceObj!, targetObj!);
-            results.Add(CreateCompareResult(sourceObj!, objectType, diffs, key, key, null));
+            result = CreateCompareResult(sourceObj!, objectType, diffs, key, key, null);
+            if (parentSelector != null)
+                result.ParentObject = parentSelector(sourceObj!);
+            results.Add(result);
         }
 
         return results;
@@ -570,15 +592,37 @@ public class CompareService : ICompareService
             }
             else if (i < s.Parameters.Count)
             {
-                diffs.Add($"Parameter '{s.Parameters[i].Name}' is missing in Target");
+                var paramName = s.Parameters[i].Name;
+                var line = FindLineNumber(s.Definition, paramName);
+                var lineInfo = line > 0 ? $" on line {line}" : "";
+                diffs.Add($"Parameter '{paramName}' is missing in Target{lineInfo}");
             }
             else
             {
-                diffs.Add($"Parameter '{t.Parameters[i].Name}' is missing in Source");
+                var paramName = t.Parameters[i].Name;
+                var line = FindLineNumber(t.Definition, paramName);
+                var lineInfo = line > 0 ? $" on line {line}" : "";
+                diffs.Add($"Parameter '{paramName}' is missing in Source{lineInfo}");
             }
         }
 
         return diffs;
+    }
+
+    private static int FindLineNumber(string? definition, string parameterName)
+    {
+        if (string.IsNullOrEmpty(definition) || string.IsNullOrEmpty(parameterName))
+            return 0;
+
+        var lines = definition.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
+        for (int i = 0; i < lines.Length; i++)
+        {
+            if (lines[i].Contains(parameterName, StringComparison.OrdinalIgnoreCase))
+            {
+                return i + 1; // 1-based line number
+            }
+        }
+        return 0;
     }
 
     private static List<string> GetDefinitionDifferences(string? s, string? t)
@@ -632,5 +676,49 @@ public class CompareService : ICompareService
         var targetCols = string.Join(",", t.Columns.OrderBy(c => c));
         if (sourceCols != targetCols) diffs.Add($"Columns: [{sourceCols}] -> [{targetCols}]");
         return diffs;
+    }
+
+    private static string GenerateAddColumnSql(ColumnSchema col, DatabaseType dbType)
+    {
+        string schema = col.SchemaName;
+        string table = col.TableName;
+        string column = col.Name;
+        
+        string dataTypeStr = col.DataTypeFull;
+        if (dbType == DatabaseType.SqlServer)
+        {
+            if (col.MaxLength == -1 || col.MaxLength == 1073741823)
+            {
+                dataTypeStr = $"{col.DataType}(MAX)";
+            }
+        }
+
+        string nullability = col.IsNullable ? "NULL" : "NOT NULL";
+        string defaultValue = "";
+        if (!string.IsNullOrEmpty(col.DefaultValue))
+        {
+            defaultValue = $" DEFAULT {col.DefaultValue}";
+        }
+
+        return dbType switch
+        {
+            DatabaseType.SqlServer => string.IsNullOrEmpty(schema)
+                ? $"ALTER TABLE [{table}] ADD [{column}] {dataTypeStr} {defaultValue} {nullability};"
+                : $"ALTER TABLE [{schema}].[{table}] ADD [{column}] {dataTypeStr} {defaultValue} {nullability};",
+            
+            DatabaseType.PostgreSql => string.IsNullOrEmpty(schema)
+                ? $"ALTER TABLE \"{table}\" ADD COLUMN \"{column}\" {dataTypeStr} {defaultValue} {nullability};"
+                : $"ALTER TABLE \"{schema}\".\"{table}\" ADD COLUMN \"{column}\" {dataTypeStr} {defaultValue} {nullability};",
+
+            DatabaseType.MySql or DatabaseType.MariaDb => string.IsNullOrEmpty(schema)
+                ? $"ALTER TABLE `{table}` ADD COLUMN `{column}` {dataTypeStr} {defaultValue} {nullability};"
+                : $"ALTER TABLE `{schema}`.`{table}` ADD COLUMN `{column}` {dataTypeStr} {defaultValue} {nullability};",
+
+            DatabaseType.Oracle => string.IsNullOrEmpty(schema)
+                ? $"ALTER TABLE \"{table}\" ADD \"{column}\" {dataTypeStr} {defaultValue} {nullability};"
+                : $"ALTER TABLE \"{schema}\".\"{table}\" ADD \"{column}\" {dataTypeStr} {defaultValue} {nullability};",
+
+            _ => throw new NotSupportedException($"Database type {dbType} is not supported for sync script generation.")
+        };
     }
 }

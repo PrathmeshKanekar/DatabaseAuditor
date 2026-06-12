@@ -3,75 +3,48 @@ namespace DatabaseAuditor.WPF.ViewModels;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using DatabaseAuditor.Application.UseCases.ExportReport;
-using DatabaseAuditor.Domain.Enums;
-using DatabaseAuditor.Domain.ValueObjects;
 using DatabaseAuditor.WPF.Helpers;
-using Serilog;
-using System.IO;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+
+using DatabaseAuditor.Domain.ValueObjects;
 
 public partial class ReportsViewModel : ObservableObject
 {
     private readonly ExportReportHandler _exportHandler;
     private readonly IDialogService _dialogService;
-    private CompareSession? _currentSession;
 
-    [ObservableProperty]
-    private bool _exportExcel = true;
+    [ObservableProperty] private bool _exportExcel = true;
+    [ObservableProperty] private bool _exportPdf = true;
+    [ObservableProperty] private string _outputDirectory;
+    [ObservableProperty] private string _statusMessage = string.Empty;
+    [ObservableProperty] private bool _hasSession;
+    [ObservableProperty] private string _sessionSummary = "No comparison session available.";
 
-    [ObservableProperty]
-    private bool _exportPdf = true;
-
-    [ObservableProperty]
-    private string _outputDirectory = Environment.GetFolderPath(
-        Environment.SpecialFolder.MyDocuments);
-
-    [ObservableProperty]
-    private bool _isGenerating;
-
-    [ObservableProperty]
-    private bool _hasSession;
-
-    [ObservableProperty]
-    private string _sessionSummary = "No comparison session loaded.";
-
-    [ObservableProperty]
-    private string _statusMessage = string.Empty;
-
-    [ObservableProperty]
-    private bool _hasError;
-
-    [ObservableProperty]
-    private string _errorMessage = string.Empty;
-
-    [ObservableProperty]
-    private string _lastExcelPath = string.Empty;
-
-    [ObservableProperty]
-    private string _lastPdfPath = string.Empty;
-
-    [ObservableProperty]
-    private bool _hasExcelOutput;
-
-    [ObservableProperty]
-    private bool _hasPdfOutput;
-
-    [ObservableProperty]
-    private double _progressValue;
-
-    [ObservableProperty]
-    private string _progressMessage = string.Empty;
-
-    // Session Stats
+    [ObservableProperty] private string _sourceInfo = string.Empty;
+    [ObservableProperty] private string _targetInfo = string.Empty;
+    [ObservableProperty] private string _compareType = string.Empty;
+    [ObservableProperty] private string _executionTime = string.Empty;
+    [ObservableProperty] private string _comparisonScope = string.Empty;
+    [ObservableProperty] private string _selectedObjectsSummary = string.Empty;
     [ObservableProperty] private int _totalObjects;
     [ObservableProperty] private int _addedCount;
     [ObservableProperty] private int _deletedCount;
     [ObservableProperty] private int _modifiedCount;
-    [ObservableProperty] private string _sourceInfo = string.Empty;
-    [ObservableProperty] private string _targetInfo = string.Empty;
-    [ObservableProperty] private string _compareType = string.Empty;
-    [ObservableProperty] private string _comparisonScope = string.Empty;
-    [ObservableProperty] private string _selectedObjectsSummary = string.Empty;
-    [ObservableProperty] private string _executionTime = string.Empty;
+
+    [ObservableProperty] private bool _isGenerating;
+    [ObservableProperty] private string _progressMessage = string.Empty;
+    [ObservableProperty] private int _progressValue;
+    [ObservableProperty] private bool _hasError;
+    [ObservableProperty] private string _errorMessage = string.Empty;
+
+    [ObservableProperty] private string? _lastExcelPath;
+    [ObservableProperty] private string? _lastPdfPath;
+
+    public bool HasExcelOutput => !string.IsNullOrEmpty(LastExcelPath);
+    public bool HasPdfOutput => !string.IsNullOrEmpty(LastPdfPath);
 
     public ReportsViewModel(
         ExportReportHandler exportHandler,
@@ -79,228 +52,188 @@ public partial class ReportsViewModel : ObservableObject
     {
         _exportHandler = exportHandler;
         _dialogService = dialogService;
+        _outputDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
     }
 
-    public void LoadSession(CompareSession session)
+    private CompareSession? GetActiveSession()
     {
-        _currentSession = session;
-        HasSession = true;
+        var baseSession = CompareViewModel.LastSession;
+        if (baseSession == null) return null;
 
-        Log.Information("ReportsViewModel Loaded Results: {Count}", session.Results.Count);
-
-        TotalObjects = session.TotalObjects;
-        AddedCount = session.AddedCount;
-        DeletedCount = session.DeletedCount;
-        ModifiedCount = session.ModifiedCount;
-        SourceInfo = session.Source.DisplayName;
-        TargetInfo = session.Target.DisplayName;
-        CompareType = session.CompareType.ToString();
-        ComparisonScope = session.ComparisonScope.ToString();
-        SelectedObjectsSummary = session.SelectedObjects.Count == 0
-            ? "All objects in scope"
-            : string.Join(", ", session.SelectedObjects.Take(10)) +
-              (session.SelectedObjects.Count > 10 ? $" (+{session.SelectedObjects.Count - 10} more)" : string.Empty);
-        ExecutionTime = $"{session.ExecutionTime.TotalSeconds:F2}s";
-
-        SessionSummary = $"{session.Source.DatabaseName} vs {session.Target.DatabaseName}" +
-                         $"  |  {session.ComparisonScope}" +
-                         $"  |  {session.CompareType}" +
-                         $"  |  {session.TotalObjects} objects";
-
-        HasExcelOutput = false;
-        HasPdfOutput = false;
-        StatusMessage = string.Empty;
-        HasError = false;
-
-        Log.Information("[Reports] Session loaded: {Summary} Results={Count}", SessionSummary, session.Results.Count);
-    }
-
-    [RelayCommand]
-    private void Refresh()
-    {
-        StatusMessage = string.Empty;
-        HasError = false;
-        ErrorMessage = string.Empty;
-    }
-
-    [RelayCommand]
-    private void BrowseOutputDirectory()
-    {
-        var selected = _dialogService.ShowFolderBrowserDialog(
-            "Select Output Directory");
-
-        if (!string.IsNullOrEmpty(selected))
+        if (ResultsViewModel.LastFilteredResults != null)
         {
-            OutputDirectory = selected;
-            Log.Information("[Reports] Output directory set: {Path}", selected);
+            var filtered = ResultsViewModel.LastFilteredResults;
+            return new CompareSession
+            {
+                Id = baseSession.Id,
+                Source = baseSession.Source,
+                Target = baseSession.Target,
+                CompareType = baseSession.CompareType,
+                ComparisonScope = baseSession.ComparisonScope,
+                SelectedObjects = baseSession.SelectedObjects,
+                StartedAt = baseSession.StartedAt,
+                CompletedAt = baseSession.CompletedAt,
+                IsSuccess = baseSession.IsSuccess,
+                ErrorMessage = baseSession.ErrorMessage,
+                Results = filtered
+            };
+        }
+
+        return baseSession;
+    }
+
+    public void RefreshSession()
+    {
+        var session = GetActiveSession();
+        HasSession = session != null;
+        if (session != null)
+        {
+            SessionSummary = $"Session {session.Id.ToString()[..8].ToUpper()}";
+            SourceInfo = $"[{session.Source.Environment}] {session.Source.Name}";
+            TargetInfo = $"[{session.Target.Environment}] {session.Target.Name}";
+            CompareType = session.CompareType.ToString();
+            ExecutionTime = $"{session.ExecutionTime.TotalSeconds:F2}s";
+            ComparisonScope = session.ComparisonScope.ToString();
+            
+            if (session.SelectedObjects != null && session.SelectedObjects.Count > 0)
+            {
+                SelectedObjectsSummary = session.SelectedObjects.Count <= 3
+                    ? string.Join(", ", session.SelectedObjects)
+                    : $"{string.Join(", ", session.SelectedObjects.Take(3))} ... (+{session.SelectedObjects.Count - 3} more)";
+            }
+            else
+            {
+                SelectedObjectsSummary = "All database objects";
+            }
+
+            TotalObjects = session.TotalObjects;
+            AddedCount = session.AddedCount;
+            DeletedCount = session.DeletedCount;
+            ModifiedCount = session.ModifiedCount;
         }
     }
 
     [RelayCommand]
-    private async Task GenerateReportsAsync()
+    public void BrowseOutputDirectory()
     {
-        if (_currentSession == null)
+        var path = _dialogService.ShowFolderBrowserDialog("Select Output Directory");
+        if (path != null) OutputDirectory = path;
+    }
+
+    [RelayCommand]
+    public void OpenExcelReport()
+    {
+        if (HasExcelOutput)
+            OpenPath(LastExcelPath!);
+    }
+
+    [RelayCommand]
+    public void OpenPdfReport()
+    {
+        if (HasPdfOutput)
+            OpenPath(LastPdfPath!);
+    }
+
+    [RelayCommand]
+    public void OpenOutputDirectory()
+    {
+        OpenPath(OutputDirectory);
+    }
+
+    private void OpenPath(string path)
+    {
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = path,
+                UseShellExecute = true
+            });
+        }
+        catch (Exception ex)
+        {
+            _dialogService.ShowError("Error Opening File", $"Could not open path '{path}': {ex.Message}");
+        }
+    }
+
+    [RelayCommand]
+    public async Task GenerateReportsAsync()
+    {
+        var session = GetActiveSession();
+        if (session == null)
         {
             _dialogService.ShowInfo("No Session",
-                "Please run a comparison first.");
+                "Please run a comparison first before exporting.");
             return;
         }
 
         if (!ExportExcel && !ExportPdf)
         {
-            _dialogService.ShowInfo("No Format Selected",
-                "Please select at least one report format.");
+            _dialogService.ShowInfo("Nothing to Export",
+                "Please select at least one export format.");
             return;
-        }
-
-        if (!Directory.Exists(OutputDirectory))
-        {
-            try { Directory.CreateDirectory(OutputDirectory); }
-            catch
-            {
-                _dialogService.ShowError("Invalid Directory",
-                    "Output directory could not be created.");
-                return;
-            }
         }
 
         IsGenerating = true;
         HasError = false;
         ErrorMessage = string.Empty;
         StatusMessage = string.Empty;
-        ProgressValue = 0;
-        ProgressMessage = "Preparing report data...";
+        ProgressMessage = "Generating reports…";
+        ProgressValue = 20;
 
         try
         {
             var command = new ExportReportCommand
             {
-                Session = _currentSession,
+                Session = session,
                 ExportExcel = ExportExcel,
                 ExportPdf = ExportPdf,
                 OutputDirectory = OutputDirectory
             };
 
-            ProgressValue = 20;
-            ProgressMessage = "Generating report...";
+            ProgressValue = 50;
 
             var result = await _exportHandler.HandleAsync(command);
 
             ProgressValue = 90;
-            ProgressMessage = "Finalizing...";
 
             if (result.IsSuccess)
             {
-                LastExcelPath = result.ExcelPath ?? string.Empty;
-                LastPdfPath = result.PdfPath ?? string.Empty;
-                HasExcelOutput = !string.IsNullOrEmpty(result.ExcelPath);
-                HasPdfOutput = !string.IsNullOrEmpty(result.PdfPath);
-
-                var generated = new List<string>();
-                if (HasExcelOutput) generated.Add("Excel");
-                if (HasPdfOutput) generated.Add("PDF");
-
-                StatusMessage = $"Reports generated successfully: {string.Join(", ", generated)}";
+                LastExcelPath = result.ExcelPath;
+                LastPdfPath = result.PdfPath;
+                OnPropertyChanged(nameof(HasExcelOutput));
+                OnPropertyChanged(nameof(HasPdfOutput));
+                
+                var paths = new List<string>();
+                if (result.ExcelPath != null) paths.Add($"Excel: {result.ExcelPath}");
+                if (result.PdfPath != null) paths.Add($"PDF: {result.PdfPath}");
+                
+                StatusMessage = "Reports exported successfully.";
                 ProgressValue = 100;
-                ProgressMessage = "Complete";
-
-                Log.Information("[Reports] Generated: Excel={Excel} PDF={Pdf}",
-                    result.ExcelPath, result.PdfPath);
+                
+                _dialogService.ShowSuccess("Export Complete",
+                    string.Join("\n", paths));
             }
             else
             {
                 HasError = true;
-                ErrorMessage = result.ErrorMessage ?? "Report generation failed.";
-                ProgressMessage = "Failed";
-
-                Log.Error("[Reports] Generation failed: {Error}", result.ErrorMessage);
+                ErrorMessage = result.ErrorMessage ?? "Unknown error.";
+                StatusMessage = $"Export failed: {result.ErrorMessage}";
+                ProgressValue = 0;
+                _dialogService.ShowError("Export Failed", result.ErrorMessage ?? "Unknown error.");
             }
         }
         catch (Exception ex)
         {
             HasError = true;
             ErrorMessage = ex.Message;
-            ProgressMessage = "Error";
-            Log.Error(ex, "[Reports] Unexpected error during generation");
+            StatusMessage = $"Error: {ex.Message}";
+            ProgressValue = 0;
+            _dialogService.ShowError("Export Error", ex.Message);
         }
         finally
         {
             IsGenerating = false;
-        }
-    }
-
-    [RelayCommand]
-    private void OpenExcelReport()
-    {
-        if (string.IsNullOrEmpty(LastExcelPath) || !File.Exists(LastExcelPath))
-        {
-            _dialogService.ShowInfo("File Not Found",
-                "Excel report file not found.");
-            return;
-        }
-
-        try
-        {
-            System.Diagnostics.Process.Start(
-                new System.Diagnostics.ProcessStartInfo
-                {
-                    FileName = LastExcelPath,
-                    UseShellExecute = true
-                });
-        }
-        catch (Exception ex)
-        {
-            _dialogService.ShowError("Open Failed", ex.Message);
-        }
-    }
-
-    [RelayCommand]
-    private void OpenPdfReport()
-    {
-        if (string.IsNullOrEmpty(LastPdfPath) || !File.Exists(LastPdfPath))
-        {
-            _dialogService.ShowInfo("File Not Found",
-                "PDF report file not found.");
-            return;
-        }
-
-        try
-        {
-            System.Diagnostics.Process.Start(
-                new System.Diagnostics.ProcessStartInfo
-                {
-                    FileName = LastPdfPath,
-                    UseShellExecute = true
-                });
-        }
-        catch (Exception ex)
-        {
-            _dialogService.ShowError("Open Failed", ex.Message);
-        }
-    }
-
-    [RelayCommand]
-    private void OpenOutputDirectory()
-    {
-        if (!Directory.Exists(OutputDirectory))
-        {
-            _dialogService.ShowInfo("Directory Not Found",
-                "Output directory does not exist.");
-            return;
-        }
-
-        try
-        {
-            System.Diagnostics.Process.Start(
-                new System.Diagnostics.ProcessStartInfo
-                {
-                    FileName = OutputDirectory,
-                    UseShellExecute = true
-                });
-        }
-        catch (Exception ex)
-        {
-            _dialogService.ShowError("Open Failed", ex.Message);
         }
     }
 }

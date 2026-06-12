@@ -36,13 +36,20 @@ public class ExcelReportGenerator : IReportService
             {
                 using var workbook = new XLWorkbook();
 
-                BuildSummarySheet(workbook, model);
-                BuildResultSheet(workbook, model, "Added",
-                    model.AddedObjects, AddedBg, AddedFg);
-                BuildResultSheet(workbook, model, "Deleted",
-                    model.DeletedObjects, DeletedBg, DeletedFg);
-                BuildModifiedSheet(workbook, model);
-                BuildAllResultsSheet(workbook, model);
+                if (model.CompareType == Domain.Enums.CompareType.Procedure)
+                {
+                    BuildProcedureParameterComparisonSheet(workbook, model);
+                }
+                else
+                {
+                    BuildSummarySheet(workbook, model);
+                    BuildResultSheet(workbook, model, "Added",
+                        model.AddedObjects, AddedBg, AddedFg);
+                    BuildResultSheet(workbook, model, "Deleted",
+                        model.DeletedObjects, DeletedBg, DeletedFg);
+                    BuildModifiedSheet(workbook, model);
+                    BuildAllResultsSheet(workbook, model);
+                }
 
                 workbook.SaveAs(outputPath);
             }, cancellationToken);
@@ -397,4 +404,159 @@ public class ExcelReportGenerator : IReportService
         IXLWorksheet ws,
         int r1, int c1, int r2, int c2)
         => ws.Range(r1, c1, r2, c2).Merge();
+
+    private static void BuildProcedureParameterComparisonSheet(XLWorkbook wb, ReportModel model)
+    {
+        var ws = wb.Worksheets.Add("Parameter Compare");
+        ws.ShowGridLines = false;
+
+        WriteSheetTitle(ws, $"Stored Procedure Parameter Comparison — {model.SourceDatabase} vs {model.TargetDatabase}");
+
+        string[] headers = ["#", "Stored Procedure", "Source Parameter", "Target Parameter", "Difference Details", "Detected At"];
+        int[] widths = [6, 30, 35, 35, 45, 20];
+
+        WriteHeaders(ws, 3, headers, widths);
+
+        int row = 4;
+        int seq = 1;
+
+        var allProcs = model.ModifiedObjects
+            .Concat(model.AddedObjects)
+            .Concat(model.DeletedObjects)
+            .Where(r => r.ObjectType == Domain.Enums.CompareType.Procedure);
+
+        foreach (var r in allProcs)
+        {
+            if (r.ChangeType == Domain.Enums.ChangeType.Added)
+            {
+                var isAlt = seq % 2 == 0;
+                var bg = isAlt ? AlternateRow : XLColor.White;
+
+                ws.Cell(row, 1).Value = seq++;
+                ws.Cell(row, 2).Value = r.FullObjectName;
+                ws.Cell(row, 3).Value = "Missing (Procedure not in Source)";
+                ws.Cell(row, 4).Value = "Present in Target";
+                ws.Cell(row, 5).Value = "Procedure Added";
+                ws.Cell(row, 6).Value = r.DetectedAt.ToString("yyyy-MM-dd HH:mm");
+
+                var rowRange = ws.Range(row, 1, row, 6);
+                rowRange.Style.Fill.BackgroundColor = bg;
+                rowRange.Style.Border.BottomBorder = XLBorderStyleValues.Thin;
+                rowRange.Style.Border.BottomBorderColor = XLColor.FromHtml("#E0E0E0");
+                row++;
+            }
+            else if (r.ChangeType == Domain.Enums.ChangeType.Deleted)
+            {
+                var isAlt = seq % 2 == 0;
+                var bg = isAlt ? AlternateRow : XLColor.White;
+
+                ws.Cell(row, 1).Value = seq++;
+                ws.Cell(row, 2).Value = r.FullObjectName;
+                ws.Cell(row, 3).Value = "Present in Source";
+                ws.Cell(row, 4).Value = "Missing (Procedure not in Target)";
+                ws.Cell(row, 5).Value = "Procedure Deleted";
+                ws.Cell(row, 6).Value = r.DetectedAt.ToString("yyyy-MM-dd HH:mm");
+
+                var rowRange = ws.Range(row, 1, row, 6);
+                rowRange.Style.Fill.BackgroundColor = bg;
+                rowRange.Style.Border.BottomBorder = XLBorderStyleValues.Thin;
+                rowRange.Style.Border.BottomBorderColor = XLColor.FromHtml("#E0E0E0");
+                row++;
+            }
+            else // Modified
+            {
+                var paramDiffs = r.Differences.Where(d => d.Contains("Parameter")).ToList();
+                if (paramDiffs.Count == 0)
+                    continue;
+
+                foreach (var diff in paramDiffs)
+                {
+                    var isAlt = seq % 2 == 0;
+                    var bg = isAlt ? AlternateRow : XLColor.White;
+                    var (srcParam, tgtParam, diffText) = ParseParameterDiff(diff);
+
+                    ws.Cell(row, 1).Value = seq++;
+                    ws.Cell(row, 2).Value = r.FullObjectName;
+                    ws.Cell(row, 3).Value = srcParam;
+                    ws.Cell(row, 4).Value = tgtParam;
+                    ws.Cell(row, 5).Value = diffText;
+                    ws.Cell(row, 6).Value = r.DetectedAt.ToString("yyyy-MM-dd HH:mm");
+
+                    var rowRange = ws.Range(row, 1, row, 6);
+                    rowRange.Style.Fill.BackgroundColor = bg;
+                    rowRange.Style.Border.BottomBorder = XLBorderStyleValues.Thin;
+                    rowRange.Style.Border.BottomBorderColor = XLColor.FromHtml("#E0E0E0");
+
+                    ws.Cell(row, 5).Style.Fill.BackgroundColor = ModifiedBg;
+                    ws.Cell(row, 5).Style.Font.FontColor = ModifiedFg;
+                    ws.Cell(row, 5).Style.Font.Bold = true;
+
+                    row++;
+                }
+            }
+        }
+
+        if (seq == 1)
+        {
+            MergeCells(ws, 4, 1, 4, 6);
+            ws.Cell(4, 1).Value = "No procedure parameter differences found.";
+            ws.Cell(4, 1).Style.Font.Italic = true;
+            ws.Cell(4, 1).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+        }
+
+        ApplyWidths(ws, widths);
+        ws.SheetView.FreezeRows(3);
+    }
+
+    private static (string SourceParam, string TargetParam, string DiffType) ParseParameterDiff(string diff)
+    {
+        if (diff.Contains("is missing in Target"))
+        {
+            var match = System.Text.RegularExpressions.Regex.Match(diff, @"Parameter '([^']+)'");
+            var param = match.Success ? match.Groups[1].Value : "Parameter";
+            var lineMatch = System.Text.RegularExpressions.Regex.Match(diff, @"on line (\d+)");
+            var lineInfo = lineMatch.Success ? $" (Line {lineMatch.Groups[1].Value})" : "";
+            return (param + lineInfo, "Missing", "Missing in Target");
+        }
+        else if (diff.Contains("is missing in Source"))
+        {
+            var match = System.Text.RegularExpressions.Regex.Match(diff, @"Parameter '([^']+)'");
+            var param = match.Success ? match.Groups[1].Value : "Parameter";
+            var lineMatch = System.Text.RegularExpressions.Regex.Match(diff, @"on line (\d+)");
+            var lineInfo = lineMatch.Success ? $" (Line {lineMatch.Groups[1].Value})" : "";
+            return ("Missing", param + lineInfo, "Missing in Source");
+        }
+        else if (diff.Contains("->"))
+        {
+            var parts = diff.Split("->");
+            var left = parts[0].Trim();
+            var right = parts[1].Trim();
+
+            var nameMatch = System.Text.RegularExpressions.Regex.Match(left, @"Parameter \d+ '([^']+)'");
+            var paramName = nameMatch.Success ? nameMatch.Groups[1].Value : "";
+
+            if (diff.Contains("Name:"))
+            {
+                var sourceVal = left.Substring(left.IndexOf("Name:") + 5).Trim();
+                return (sourceVal, right, "Name Mismatch");
+            }
+            else if (diff.Contains("DataType:"))
+            {
+                var sourceVal = left.Substring(left.IndexOf("DataType:") + 9).Trim();
+                return ($"{paramName} ({sourceVal})", $"{paramName} ({right})", "DataType Mismatch");
+            }
+            else if (diff.Contains("IsOutput:"))
+            {
+                var sourceVal = left.Substring(left.IndexOf("IsOutput:") + 9).Trim();
+                return ($"{paramName} (Output: {sourceVal})", $"{paramName} (Output: {right})", "Output Flag Mismatch");
+            }
+            else if (diff.Contains("Position:"))
+            {
+                var sourceVal = left.Substring(left.IndexOf("Position:") + 9).Trim();
+                return ($"{paramName} (Pos: {sourceVal})", $"{paramName} (Pos: {right})", "Position Mismatch");
+            }
+        }
+
+        return ("", "", diff);
+    }
 }

@@ -14,12 +14,13 @@ public static class DependencyInjection
         services.AddSingleton<ExcelReportGenerator>();
         services.AddSingleton<PdfReportGenerator>();
 
-        // Register both as IReportService for collection injection
-        services.AddSingleton<IReportService, ExcelReportGenerator>();
-        services.AddSingleton<IReportService, PdfReportGenerator>();
-
-        // Register orchestrating ReportService
-        services.AddSingleton<ReportService>();
+        // Register orchestrating ReportService as the primary default IReportService
+        services.AddSingleton<IReportService>(sp =>
+            new ReportService(new IReportService[]
+            {
+                sp.GetRequiredService<ExcelReportGenerator>(),
+                sp.GetRequiredService<PdfReportGenerator>()
+            }));
 
         return services;
     }

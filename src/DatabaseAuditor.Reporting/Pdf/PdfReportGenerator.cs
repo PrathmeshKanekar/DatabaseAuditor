@@ -119,34 +119,45 @@ public class PdfReportGenerator : IReportService
         {
             col.Spacing(12);
 
-            // Summary Cards
-            col.Item().Element(c => BuildSummaryCards(c, model));
-
-            // Environment Info
-            col.Item().Element(c => BuildEnvironmentSection(c, model));
-
-            // Added Objects
-            if (model.AddedObjects.Count > 0)
+            if (model.CompareType == Domain.Enums.CompareType.Procedure)
             {
-                col.Item().Element(c => BuildResultTable(
-                    c, "Added Objects",
-                    model.AddedObjects,
-                    AddedColor, "#E8F5E9"));
+                // Environment Info
+                col.Item().Element(c => BuildEnvironmentSection(c, model));
+
+                // Procedure Parameter Comparison Table
+                col.Item().Element(c => BuildProcedureParameterComparisonTable(c, model));
             }
-
-            // Deleted Objects
-            if (model.DeletedObjects.Count > 0)
+            else
             {
-                col.Item().Element(c => BuildResultTable(
-                    c, "Deleted Objects",
-                    model.DeletedObjects,
-                    DeletedColor, "#FFEBEE"));
-            }
+                // Summary Cards
+                col.Item().Element(c => BuildSummaryCards(c, model));
 
-            // Modified Objects
-            if (model.ModifiedObjects.Count > 0)
-            {
-                col.Item().Element(c => BuildModifiedTable(c, model));
+                // Environment Info
+                col.Item().Element(c => BuildEnvironmentSection(c, model));
+
+                // Added Objects
+                if (model.AddedObjects.Count > 0)
+                {
+                    col.Item().Element(c => BuildResultTable(
+                        c, "Added Objects",
+                        model.AddedObjects,
+                        AddedColor, "#E8F5E9"));
+                }
+
+                // Deleted Objects
+                if (model.DeletedObjects.Count > 0)
+                {
+                    col.Item().Element(c => BuildResultTable(
+                        c, "Deleted Objects",
+                        model.DeletedObjects,
+                        DeletedColor, "#FFEBEE"));
+                }
+
+                // Modified Objects
+                if (model.ModifiedObjects.Count > 0)
+                {
+                    col.Item().Element(c => BuildModifiedTable(c, model));
+                }
             }
         });
     }
@@ -199,67 +210,70 @@ public class PdfReportGenerator : IReportService
     // -------------------------------------------------------------------------
     private static void BuildEnvironmentSection(IContainer container, ReportModel model)
     {
-        container.Row(row =>
+        container.Column(col =>
         {
-            row.Spacing(8);
-
-            // Source
-            row.RelativeItem().Border(1).BorderColor(BorderColor).Column(col =>
+            col.Item().Row(row =>
             {
-                col.Item()
-                    .Background(PrimaryColor).Padding(6)
-                    .Text("Source Environment")
-                    .Bold().FontColor(Colors.White).FontSize(9);
+                row.Spacing(8);
 
-                col.Item().Padding(8).Column(info =>
+                // Source
+                row.RelativeItem().Border(1).BorderColor(BorderColor).Column(colSource =>
                 {
-                    EnvRow(info, "Environment", model.SourceEnvironment);
-                    EnvRow(info, "Database Type", model.SourceDatabaseType.ToString());
-                    EnvRow(info, "Server", model.SourceServer);
-                    EnvRow(info, "Database", model.SourceDatabase);
+                    colSource.Item()
+                        .Background(PrimaryColor).Padding(6)
+                        .Text("Source Environment")
+                        .Bold().FontColor(Colors.White).FontSize(9);
+
+                    colSource.Item().Padding(8).Column(info =>
+                    {
+                        EnvRow(info, "Environment", model.SourceEnvironment);
+                        EnvRow(info, "Database Type", model.SourceDatabaseType.ToString());
+                        EnvRow(info, "Server", model.SourceServer);
+                        EnvRow(info, "Database", model.SourceDatabase);
+                    });
+                });
+
+                // Target
+                row.RelativeItem().Border(1).BorderColor(BorderColor).Column(colTarget =>
+                {
+                    colTarget.Item()
+                        .Background(PrimaryColor).Padding(6)
+                        .Text("Target Environment")
+                        .Bold().FontColor(Colors.White).FontSize(9);
+
+                    colTarget.Item().Padding(8).Column(info =>
+                    {
+                        EnvRow(info, "Environment", model.TargetEnvironment);
+                        EnvRow(info, "Database Type", model.TargetDatabaseType.ToString());
+                        EnvRow(info, "Server", model.TargetServer);
+                        EnvRow(info, "Database", model.TargetDatabase);
+                    });
+                });
+
+                // Execution
+                row.RelativeItem().Border(1).BorderColor(BorderColor).Column(colExec =>
+                {
+                    colExec.Item()
+                        .Background(PrimaryColor).Padding(6)
+                        .Text("Execution Details")
+                        .Bold().FontColor(Colors.White).FontSize(9);
+
+                    colExec.Item().Padding(8).Column(info =>
+                    {
+                        EnvRow(info, "Compare Type", model.CompareType.ToString());
+                        EnvRow(info, "Scope", model.ComparisonScope.ToString());
+                        EnvRow(info, "Started At", model.StartedAt.ToString("yyyy-MM-dd HH:mm:ss"));
+                        EnvRow(info, "Completed At", model.CompletedAt.ToString("yyyy-MM-dd HH:mm:ss"));
+                        EnvRow(info, "Status", model.IsSuccess ? "Success" : "Failed");
+                    });
                 });
             });
 
-            // Target
-            row.RelativeItem().Border(1).BorderColor(BorderColor).Column(col =>
+            if (model.SelectedObjects.Count > 0)
             {
-                col.Item()
-                    .Background(PrimaryColor).Padding(6)
-                    .Text("Target Environment")
-                    .Bold().FontColor(Colors.White).FontSize(9);
-
-                col.Item().Padding(8).Column(info =>
-                {
-                    EnvRow(info, "Environment", model.TargetEnvironment);
-                    EnvRow(info, "Database Type", model.TargetDatabaseType.ToString());
-                    EnvRow(info, "Server", model.TargetServer);
-                    EnvRow(info, "Database", model.TargetDatabase);
-                });
-            });
-
-            // Execution
-            row.RelativeItem().Border(1).BorderColor(BorderColor).Column(col =>
-            {
-                col.Item()
-                    .Background(PrimaryColor).Padding(6)
-                    .Text("Execution Details")
-                    .Bold().FontColor(Colors.White).FontSize(9);
-
-                col.Item().Padding(8).Column(info =>
-                {
-                    EnvRow(info, "Compare Type", model.CompareType.ToString());
-                    EnvRow(info, "Scope", model.ComparisonScope.ToString());
-                    EnvRow(info, "Started At", model.StartedAt.ToString("yyyy-MM-dd HH:mm:ss"));
-                    EnvRow(info, "Completed At", model.CompletedAt.ToString("yyyy-MM-dd HH:mm:ss"));
-                    EnvRow(info, "Status", model.IsSuccess ? "Success" : "Failed");
-                });
-            });
+                col.Item().PaddingTop(8).Text($"Selected Objects: {string.Join(", ", model.SelectedObjects)}").FontSize(8);
+            }
         });
-
-        if (model.SelectedObjects.Count > 0)
-        {
-            container.PaddingTop(8).Text($"Selected Objects: {string.Join(", ", model.SelectedObjects)}").FontSize(8);
-        }
     }
 
     private static void EnvRow(ColumnDescriptor col, string label, string value)
@@ -437,5 +451,141 @@ public class PdfReportGenerator : IReportService
 
         if (fontColor != null) t.FontColor(fontColor);
         if (bold) t.Bold();
+    }
+
+    private static void BuildProcedureParameterComparisonTable(IContainer container, ReportModel model)
+    {
+        container.Column(col =>
+        {
+            col.Item()
+                .Background(ModifiedColor).Padding(6)
+                .Text("Stored Procedure Parameter Comparison")
+                .Bold().FontColor(Colors.White).FontSize(10);
+
+            col.Item().Table(table =>
+            {
+                table.ColumnsDefinition(c =>
+                {
+                    c.ConstantColumn(30);
+                    c.RelativeColumn(3);
+                    c.RelativeColumn(3);
+                    c.RelativeColumn(3);
+                    c.RelativeColumn(4);
+                    c.RelativeColumn(2);
+                });
+
+                table.Header(header =>
+                {
+                    TableHeaderCell(header, "#");
+                    TableHeaderCell(header, "Stored Procedure");
+                    TableHeaderCell(header, "Source Parameter");
+                    TableHeaderCell(header, "Target Parameter");
+                    TableHeaderCell(header, "Difference Details");
+                    TableHeaderCell(header, "Detected At");
+                });
+
+                int seq = 1;
+                var allProcs = model.ModifiedObjects
+                    .Concat(model.AddedObjects)
+                    .Concat(model.DeletedObjects)
+                    .Where(r => r.ObjectType == Domain.Enums.CompareType.Procedure);
+
+                foreach (var r in allProcs)
+                {
+                    var isAlt = seq % 2 == 0;
+                    var bg = isAlt ? LightGray : "#FFFFFF";
+
+                    if (r.ChangeType == Domain.Enums.ChangeType.Added)
+                    {
+                        TableCell(table, seq.ToString(), bg);
+                        TableCell(table, r.FullObjectName, bg);
+                        TableCell(table, "Missing (Procedure not in Source)", bg);
+                        TableCell(table, "Present in Target", bg);
+                        TableCell(table, "Procedure Added", bg, ModifiedColor, true);
+                        TableCell(table, r.DetectedAt.ToString("yyyy-MM-dd HH:mm"), bg);
+                        seq++;
+                    }
+                    else if (r.ChangeType == Domain.Enums.ChangeType.Deleted)
+                    {
+                        TableCell(table, seq.ToString(), bg);
+                        TableCell(table, r.FullObjectName, bg);
+                        TableCell(table, "Present in Source", bg);
+                        TableCell(table, "Missing (Procedure not in Target)", bg);
+                        TableCell(table, "Procedure Deleted", bg, ModifiedColor, true);
+                        TableCell(table, r.DetectedAt.ToString("yyyy-MM-dd HH:mm"), bg);
+                        seq++;
+                    }
+                    else
+                    {
+                        var paramDiffs = r.Differences.Where(d => d.Contains("Parameter")).ToList();
+                        foreach (var diff in paramDiffs)
+                        {
+                            var rowBg = seq % 2 == 0 ? LightGray : "#FFFFFF";
+                            var (srcParam, tgtParam, diffText) = ParseParameterDiff(diff);
+
+                            TableCell(table, seq.ToString(), rowBg);
+                            TableCell(table, r.FullObjectName, rowBg);
+                            TableCell(table, srcParam, rowBg);
+                            TableCell(table, tgtParam, rowBg);
+                            TableCell(table, diffText, "#FFF8E1", ModifiedColor, true);
+                            TableCell(table, r.DetectedAt.ToString("yyyy-MM-dd HH:mm"), rowBg);
+                            seq++;
+                        }
+                    }
+                }
+            });
+        });
+    }
+
+    private static (string SourceParam, string TargetParam, string DiffType) ParseParameterDiff(string diff)
+    {
+        if (diff.Contains("is missing in Target"))
+        {
+            var match = System.Text.RegularExpressions.Regex.Match(diff, @"Parameter '([^']+)'");
+            var param = match.Success ? match.Groups[1].Value : "Parameter";
+            var lineMatch = System.Text.RegularExpressions.Regex.Match(diff, @"on line (\d+)");
+            var lineInfo = lineMatch.Success ? $" (Line {lineMatch.Groups[1].Value})" : "";
+            return (param + lineInfo, "Missing", "Missing in Target");
+        }
+        else if (diff.Contains("is missing in Source"))
+        {
+            var match = System.Text.RegularExpressions.Regex.Match(diff, @"Parameter '([^']+)'");
+            var param = match.Success ? match.Groups[1].Value : "Parameter";
+            var lineMatch = System.Text.RegularExpressions.Regex.Match(diff, @"on line (\d+)");
+            var lineInfo = lineMatch.Success ? $" (Line {lineMatch.Groups[1].Value})" : "";
+            return ("Missing", param + lineInfo, "Missing in Source");
+        }
+        else if (diff.Contains("->"))
+        {
+            var parts = diff.Split("->");
+            var left = parts[0].Trim();
+            var right = parts[1].Trim();
+
+            var nameMatch = System.Text.RegularExpressions.Regex.Match(left, @"Parameter \d+ '([^']+)'");
+            var paramName = nameMatch.Success ? nameMatch.Groups[1].Value : "";
+
+            if (diff.Contains("Name:"))
+            {
+                var sourceVal = left.Substring(left.IndexOf("Name:") + 5).Trim();
+                return (sourceVal, right, "Name Mismatch");
+            }
+            else if (diff.Contains("DataType:"))
+            {
+                var sourceVal = left.Substring(left.IndexOf("DataType:") + 9).Trim();
+                return ($"{paramName} ({sourceVal})", $"{paramName} ({right})", "DataType Mismatch");
+            }
+            else if (diff.Contains("IsOutput:"))
+            {
+                var sourceVal = left.Substring(left.IndexOf("IsOutput:") + 9).Trim();
+                return ($"{paramName} (Output: {sourceVal})", $"{paramName} (Output: {right})", "Output Flag Mismatch");
+            }
+            else if (diff.Contains("Position:"))
+            {
+                var sourceVal = left.Substring(left.IndexOf("Position:") + 9).Trim();
+                return ($"{paramName} (Pos: {sourceVal})", $"{paramName} (Pos: {right})", "Position Mismatch");
+            }
+        }
+
+        return ("", "", diff);
     }
 }

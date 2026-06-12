@@ -17,4 +17,5 @@ public interface IDatabaseProvider
     Task<List<TriggerSchema>> GetTriggersAsync(ConnectionProfile connection, IReadOnlyCollection<string>? selectedTriggers = null, CancellationToken cancellationToken = default);
     Task<List<ConstraintSchema>> GetConstraintsAsync(ConnectionProfile connection, IReadOnlyCollection<string>? selectedTables = null, CancellationToken cancellationToken = default);
     Task<List<IndexSchema>> GetIndexesAsync(ConnectionProfile connection, IReadOnlyCollection<string>? selectedTables = null, CancellationToken cancellationToken = default);
+    Task ExecuteSqlAsync(ConnectionProfile connection, string sql, CancellationToken cancellationToken = default);
 }

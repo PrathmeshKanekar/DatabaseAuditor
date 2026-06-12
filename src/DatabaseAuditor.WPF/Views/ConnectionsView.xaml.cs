@@ -1,19 +1,25 @@
 namespace DatabaseAuditor.WPF.Views;
 
 using DatabaseAuditor.WPF.ViewModels;
+using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 
 public partial class ConnectionsView : UserControl
 {
+    private readonly ConnectionsViewModel _viewModel;
+
     public ConnectionsView(ConnectionsViewModel viewModel)
     {
         InitializeComponent();
-        DataContext = viewModel;
+        _viewModel = viewModel;
+        DataContext = _viewModel;
+        Loaded += async (_, _) => await _viewModel.LoadAsync();
+    }
 
-        Loaded += async (s, e) =>
-        {
-            if (viewModel.LoadCommand.CanExecute(null))
-                await viewModel.LoadCommand.ExecuteAsync(null);
-        };
+    private void OnGridDoubleClick(object sender, MouseButtonEventArgs e)
+    {
+        if (_viewModel.SelectedConnection != null)
+            _ = _viewModel.EditConnectionAsync();
     }
 }

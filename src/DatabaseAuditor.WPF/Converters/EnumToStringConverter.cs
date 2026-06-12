@@ -137,6 +137,7 @@ public static class EnumHelper
 
     public static List<EnumDisplayItem> GetCompareTypes() =>
     [
+        new() { Value = CompareType.Database,   Display = "Entire Database"    },
         new() { Value = CompareType.Table,      Display = "Tables"             },
         new() { Value = CompareType.Procedure,  Display = "Stored Procedures"  },
         new() { Value = CompareType.View,       Display = "Views"              },
