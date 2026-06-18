@@ -26,6 +26,7 @@ public static class DependencyInjection
         services.AddSingleton<ResultsViewModel>();
         services.AddSingleton<ReportsViewModel>();
         services.AddSingleton<SettingsViewModel>();
+        services.AddSingleton<CloneViewModel>();
 
         // Dialog ViewModels (transient — new each time)
         services.AddTransient<AddConnectionViewModel>();
@@ -37,6 +38,7 @@ public static class DependencyInjection
         services.AddSingleton<ResultsView>();
         services.AddSingleton<ReportsView>();
         services.AddSingleton<SettingsView>();
+        services.AddSingleton<CloneView>();
 
         return services;
     }

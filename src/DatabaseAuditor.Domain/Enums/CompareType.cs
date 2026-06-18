@@ -10,5 +10,6 @@ public enum CompareType
     Function = 6,
     Trigger = 7,
     Constraint = 8,
-    Index = 9
+    Index = 9,
+    UserDefinedTableType = 10
 }

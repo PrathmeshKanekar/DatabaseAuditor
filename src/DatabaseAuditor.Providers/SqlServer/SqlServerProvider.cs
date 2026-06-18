@@ -99,7 +99,7 @@ public class SqlServerProvider : BaseDatabaseProvider
                 c.TABLE_SCHEMA          AS SchemaName,
                 c.TABLE_NAME            AS TableName,
                 c.ORDINAL_POSITION      AS OrdinalPosition,
-                c.DATA_TYPE             AS DataType,
+                COALESCE(bt.name, c.DATA_TYPE) AS DataType,
                 c.CHARACTER_MAXIMUM_LENGTH AS MaxLength,
                 c.NUMERIC_PRECISION     AS Precision,
                 c.NUMERIC_SCALE         AS Scale,
@@ -113,6 +113,10 @@ public class SqlServerProvider : BaseDatabaseProvider
                 CASE WHEN pk.COLUMN_NAME IS NOT NULL THEN 1 ELSE 0 END AS IsPrimaryKey,
                 CASE WHEN fk.COLUMN_NAME IS NOT NULL THEN 1 ELSE 0 END AS IsForeignKey
             FROM INFORMATION_SCHEMA.COLUMNS c
+            LEFT JOIN sys.columns sc ON sc.object_id = OBJECT_ID(c.TABLE_SCHEMA + '.' + c.TABLE_NAME)
+                AND sc.name = c.COLUMN_NAME
+            LEFT JOIN sys.types ut ON ut.user_type_id = sc.user_type_id
+            LEFT JOIN sys.types bt ON bt.user_type_id = ut.system_type_id
             LEFT JOIN (
                 SELECT ku.TABLE_NAME, ku.COLUMN_NAME, ku.TABLE_SCHEMA
                 FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS tc
@@ -471,5 +475,90 @@ public class SqlServerProvider : BaseDatabaseProvider
             IsClustered = r.IsClustered == 1,
             Columns = (r.Columns as string)?.Split(',').ToList() ?? new List<string>()
         }).ToList();
+    }
+
+    public override async Task<List<UserDefinedTableTypeSchema>> GetUserDefinedTableTypesAsync(
+        ConnectionProfile connection,
+        IReadOnlyCollection<string>? selectedTypes = null,
+        CancellationToken cancellationToken = default)
+    {
+        var sql = """
+            SELECT 
+                tt.name AS TypeName,
+                s.name AS SchemaName,
+                c.name AS ColumnName,
+                COALESCE(bt.name, syst.name) AS DataType,
+                c.max_length AS MaxLength,
+                c.precision AS Precision,
+                c.scale AS Scale,
+                c.is_nullable AS IsNullable,
+                c.column_id AS OrdinalPosition,
+                CASE WHEN pk.column_id IS NOT NULL THEN 1 ELSE 0 END AS IsPrimaryKey
+            FROM sys.table_types tt
+            INNER JOIN sys.schemas s ON tt.schema_id = s.schema_id
+            INNER JOIN sys.columns c ON c.object_id = tt.type_table_object_id
+            INNER JOIN sys.types syst ON c.user_type_id = syst.user_type_id
+            LEFT JOIN sys.types bt ON bt.user_type_id = syst.system_type_id
+            LEFT JOIN (
+                SELECT ic.object_id, ic.column_id
+                FROM sys.indexes i
+                INNER JOIN sys.index_columns ic ON i.object_id = ic.object_id AND i.index_id = ic.index_id
+                WHERE i.is_primary_key = 1
+            ) pk ON pk.object_id = tt.type_table_object_id AND pk.column_id = c.column_id
+            """;
+
+        if (selectedTypes != null && selectedTypes.Count > 0)
+        {
+            sql += " WHERE (s.name + '.' + tt.name) IN @SelectedTypes ";
+        }
+
+        sql += " ORDER BY s.name, tt.name, c.column_id";
+
+        var rows = await QueryAsync<dynamic>(connection, sql, new { SelectedTypes = selectedTypes }, cancellationToken);
+
+        var result = new List<UserDefinedTableTypeSchema>();
+        var grouped = rows.GroupBy(r => $"{r.SchemaName}.{r.TypeName}", StringComparer.OrdinalIgnoreCase);
+
+        foreach (var group in grouped)
+        {
+            var firstRow = group.First();
+            var tableType = new UserDefinedTableTypeSchema
+            {
+                Name = firstRow.TypeName,
+                SchemaName = firstRow.SchemaName
+            };
+
+            foreach (var r in group)
+            {
+                int? maxLength = r.MaxLength;
+                string dataType = r.DataType;
+                if (maxLength.HasValue && maxLength.Value > 0)
+                {
+                    if (dataType.Equals("nvarchar", StringComparison.OrdinalIgnoreCase) ||
+                        dataType.Equals("nchar", StringComparison.OrdinalIgnoreCase))
+                    {
+                        maxLength = maxLength.Value / 2;
+                    }
+                }
+
+                var col = new ColumnSchema
+                {
+                    Name = r.ColumnName,
+                    SchemaName = r.SchemaName,
+                    TableName = r.TypeName,
+                    DataType = dataType,
+                    MaxLength = maxLength != null ? Convert.ToInt32(maxLength) : null,
+                    Precision = r.Precision != null ? Convert.ToInt32(r.Precision) : null,
+                    Scale = r.Scale != null ? Convert.ToInt32(r.Scale) : null,
+                    IsNullable = r.IsNullable is bool bn ? bn : (r.IsNullable is int inVal ? inVal == 1 : false),
+                    IsPrimaryKey = r.IsPrimaryKey is bool bp ? bp : (r.IsPrimaryKey is int ip ? ip == 1 : false),
+                    OrdinalPosition = Convert.ToInt32(r.OrdinalPosition)
+                };
+                tableType.Columns.Add(col);
+            }
+            result.Add(tableType);
+        }
+
+        return result;
     }
 }

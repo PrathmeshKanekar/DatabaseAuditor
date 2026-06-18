@@ -243,6 +243,20 @@
                                 </StackPanel>
                             </Button>
 
+                            <!-- Clone Tables -->
+                            <Button x:Name="BtnClone"
+                                    Style="{StaticResource NavButtonStyle}"
+                                    Click="OnNavClone"
+                                    Height="42">
+                                <StackPanel Orientation="Horizontal" helpers:StackPanelHelper.Spacing="12">
+                                    <TextBlock Text="⚡" FontSize="14" VerticalAlignment="Center"/>
+                                    <TextBlock Text="Clone Tables"
+                                               FontFamily="{StaticResource PrimaryFont}"
+                                               FontSize="13"
+                                               VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+
                             <!-- Section Label -->
                             <TextBlock Text="REPORTS"
                                        FontSize="9"
