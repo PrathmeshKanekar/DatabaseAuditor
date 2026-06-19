@@ -12,7 +12,7 @@ public class TableSchema : SchemaObject
     public List<ColumnSchema> Columns { get; set; } = [];
     public List<ConstraintSchema> Constraints { get; set; } = [];
     public List<IndexSchema> Indexes { get; set; } = [];
-    public long RowCount { get; set; }
+    public long TotalRows { get; set; }
     public string? Engine { get; set; }
     public string? Collation { get; set; }
 }

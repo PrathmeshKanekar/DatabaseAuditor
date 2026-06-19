@@ -1,11 +1,14 @@
 namespace DatabaseAuditor.Infrastructure.Settings;
 
+using System;
+using System.IO;
 using System.Text.Json;
+using System.Threading.Tasks;
 
 public class SettingsRepository
 {
     private readonly string _filePath;
-    private readonly SemaphoreSlim _lock = new(1, 1);
+    private readonly object _syncLock = new();
 
     private static readonly JsonSerializerOptions _jsonOptions = new()
     {
@@ -24,10 +27,9 @@ public class SettingsRepository
         EnsureDirectoryExists();
     }
 
-    public async Task<AppSettings> LoadAsync()
+    public AppSettings Load()
     {
-        await _lock.WaitAsync();
-        try
+        lock (_syncLock)
         {
             if (!File.Exists(_filePath))
             {
@@ -37,51 +39,59 @@ public class SettingsRepository
                     DefaultExportDirectory = Environment.GetFolderPath(
                         Environment.SpecialFolder.MyDocuments)
                 };
-                await SaveUnsafeAsync(defaults);
+                SaveUnsafe(defaults);
                 return defaults;
             }
 
-            var json = await File.ReadAllTextAsync(_filePath);
-            return JsonSerializer.Deserialize<AppSettings>(json, _jsonOptions)
-                ?? new AppSettings();
-        }
-        finally
-        {
-            _lock.Release();
+            try
+            {
+                var json = File.ReadAllText(_filePath);
+                return JsonSerializer.Deserialize<AppSettings>(json, _jsonOptions)
+                    ?? new AppSettings();
+            }
+            catch
+            {
+                return new AppSettings();
+            }
         }
     }
 
-    public async Task SaveAsync(AppSettings settings)
+    public Task<AppSettings> LoadAsync()
     {
-        await _lock.WaitAsync();
-        try
+        return Task.Run(() => Load());
+    }
+
+    public void Save(AppSettings settings)
+    {
+        lock (_syncLock)
         {
-            await SaveUnsafeAsync(settings);
+            SaveUnsafe(settings);
         }
-        finally
-        {
-            _lock.Release();
-        }
+    }
+
+    public Task SaveAsync(AppSettings settings)
+    {
+        return Task.Run(() => Save(settings));
     }
 
     public async Task UpdateThemeAsync(string theme)
     {
-        var settings = await LoadAsync();
+        var settings = await LoadAsync().ConfigureAwait(false);
         settings.Theme = theme;
-        await SaveAsync(settings);
+        await SaveAsync(settings).ConfigureAwait(false);
     }
 
     public async Task UpdateWindowAsync(WindowSettings window)
     {
-        var settings = await LoadAsync();
+        var settings = await LoadAsync().ConfigureAwait(false);
         settings.Window = window;
-        await SaveAsync(settings);
+        await SaveAsync(settings).ConfigureAwait(false);
     }
 
-    private async Task SaveUnsafeAsync(AppSettings settings)
+    private void SaveUnsafe(AppSettings settings)
     {
         var json = JsonSerializer.Serialize(settings, _jsonOptions);
-        await File.WriteAllTextAsync(_filePath, json);
+        File.WriteAllText(_filePath, json);
     }
 
     private static string GetDefaultLogDirectory() =>

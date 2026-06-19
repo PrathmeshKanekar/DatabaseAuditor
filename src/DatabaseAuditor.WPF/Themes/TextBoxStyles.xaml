@@ -120,9 +120,9 @@
     <!-- ===================== COMBOBOX ===================== -->
     <ControlTemplate x:Key="ComboBoxToggleButton" TargetType="ToggleButton">
         <Border x:Name="Root"
-                Background="{DynamicResource InputBackgroundBrush}"
-                BorderBrush="{DynamicResource InputBorderBrush}"
-                BorderThickness="1"
+                Background="{TemplateBinding Background}"
+                BorderBrush="{TemplateBinding BorderBrush}"
+                BorderThickness="{TemplateBinding BorderThickness}"
                 CornerRadius="{StaticResource RadiusSM}">
             <Grid>
                 <Grid.ColumnDefinitions>
@@ -175,6 +175,9 @@
                     <Grid>
                         <ToggleButton x:Name="ToggleButton"
                                       Template="{StaticResource ComboBoxToggleButton}"
+                                      Background="{TemplateBinding Background}"
+                                      BorderBrush="{TemplateBinding BorderBrush}"
+                                      BorderThickness="{TemplateBinding BorderThickness}"
                                       IsChecked="{Binding IsDropDownOpen,
                                           Mode=TwoWay,
                                           RelativeSource={RelativeSource TemplatedParent}}"
@@ -182,6 +185,8 @@
                         <ContentPresenter x:Name="ContentSite"
                                           Content="{TemplateBinding SelectionBoxItem}"
                                           ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                          ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}"
+                                          ContentStringFormat="{TemplateBinding SelectionBoxItemStringFormat}"
                                           IsHitTestVisible="False"
                                           Margin="10,0,28,0"
                                           VerticalAlignment="Center"/>
@@ -209,6 +214,16 @@
                             </Border>
                         </Popup>
                     </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                            <Setter TargetName="ToggleButton"
+                                    Property="BorderBrush"
+                                    Value="{DynamicResource InputFocusBorderBrush}"/>
+                            <Setter TargetName="ToggleButton"
+                                    Property="BorderThickness"
+                                    Value="2"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
@@ -297,6 +312,14 @@
                             <Setter TargetName="Box"
                                     Property="BorderBrush"
                                     Value="{DynamicResource AccentBrush}"/>
+                        </Trigger>
+                        <Trigger Property="IsFocused" Value="True">
+                            <Setter TargetName="Box"
+                                    Property="BorderBrush"
+                                    Value="{DynamicResource InputFocusBorderBrush}"/>
+                            <Setter TargetName="Box"
+                                    Property="BorderThickness"
+                                    Value="2"/>
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter Property="Opacity" Value="0.5"/>

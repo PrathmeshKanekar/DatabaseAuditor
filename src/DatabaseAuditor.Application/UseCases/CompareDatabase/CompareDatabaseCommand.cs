@@ -7,5 +7,7 @@ public class CompareDatabaseCommand
     public Guid SourceConnectionId { get; set; }
     public Guid TargetConnectionId { get; set; }
     public CompareType CompareType { get; set; }
+    public ComparisonScope ComparisonScope { get; set; } = ComparisonScope.EntireDatabase;
+    public List<string> SelectedObjects { get; set; } = [];
     public bool IncludeUnchanged { get; set; } = false;
 }

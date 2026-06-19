@@ -1,0 +1,381 @@
+<UserControl x:Class="DatabaseAuditor.WPF.Views.CompareView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:converters="clr-namespace:DatabaseAuditor.WPF.Converters"
+             xmlns:controls="clr-namespace:DatabaseAuditor.WPF.Controls"
+             xmlns:helpers="clr-namespace:DatabaseAuditor.WPF.Helpers"
+             Background="{DynamicResource BackgroundBrush}">
+
+	<UserControl.Resources>
+		<converters:EnumToStringConverter x:Key="EnumStr"/>
+		<converters:BoolToVisibilityConverter x:Key="BoolVis"/>
+		<converters:InverseBoolToVisibilityConverter x:Key="InvBoolVis"/>
+	</UserControl.Resources>
+
+	<ScrollViewer VerticalScrollBarVisibility="Auto">
+		<StackPanel Margin="24" helpers:StackPanelHelper.Spacing="20">
+
+			<!-- Connection Selection Card -->
+			<Border Style="{StaticResource CardStyle}">
+				<StackPanel>
+					<TextBlock Text="Select Databases to Compare"
+                               Style="{StaticResource TextHeading3}"
+                               Margin="0,0,0,4"/>
+					<TextBlock Text="Choose source and target connection profiles for schema comparison."
+                               Style="{StaticResource TextCaption}"
+                               Margin="0,0,0,20"/>
+
+					<Grid>
+						<Grid.ColumnDefinitions>
+							<ColumnDefinition/>
+							<ColumnDefinition Width="60"/>
+							<ColumnDefinition/>
+						</Grid.ColumnDefinitions>
+
+						<!-- Source -->
+						<Border Grid.Column="0"
+                                Background="{DynamicResource SurfaceElevatedBrush}"
+                                BorderBrush="{DynamicResource AddedBrush}"
+                                BorderThickness="1"
+                                CornerRadius="8"
+                                Padding="16">
+							<StackPanel helpers:StackPanelHelper.Spacing="10">
+								<StackPanel Orientation="Horizontal" helpers:StackPanelHelper.Spacing="8">
+									<Border Width="8" Height="8"
+                                            Background="{DynamicResource AddedBrush}"
+                                            CornerRadius="4"/>
+									<TextBlock Text="SOURCE DATABASE"
+                                               FontSize="10" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource AddedBrush}"
+                                               FontFamily="{StaticResource PrimaryFont}"
+                                               VerticalAlignment="Center"/>
+								</StackPanel>
+
+								<ComboBox TabIndex="1" Style="{StaticResource ModernComboBoxStyle}"
+                                          ItemsSource="{Binding Connections}"
+                                          SelectedItem="{Binding SelectedSource}"
+                                          DisplayMemberPath="DisplayName"/>
+
+								<!-- Source info panel -->
+								<Border Background="{DynamicResource SurfaceBrush}"
+                                        CornerRadius="6"
+                                        Padding="12,10"
+                                        Visibility="{Binding SelectedSource,
+                                             Converter={StaticResource BoolVis},
+                                             ConverterParameter=notNull}">
+									<StackPanel helpers:StackPanelHelper.Spacing="4">
+										<Grid>
+											<Grid.ColumnDefinitions>
+												<ColumnDefinition Width="90"/>
+												<ColumnDefinition/>
+											</Grid.ColumnDefinitions>
+											<Grid.RowDefinitions>
+												<RowDefinition/>
+												<RowDefinition/>
+												<RowDefinition/>
+												<RowDefinition/>
+											</Grid.RowDefinitions>
+
+											<TextBlock Grid.Row="0" Grid.Column="0" Text="Type"
+                                                       Style="{StaticResource TextCaption}"/>
+											<TextBlock Grid.Row="0" Grid.Column="1"
+                                                       Text="{Binding SelectedSource.DatabaseType, Converter={StaticResource EnumStr}}"
+                                                       FontFamily="{StaticResource PrimaryFont}"
+                                                       FontSize="11"/>
+
+											<TextBlock Grid.Row="1" Grid.Column="0" Text="Environment"
+                                                       Style="{StaticResource TextCaption}"/>
+											<TextBlock Grid.Row="1" Grid.Column="1"
+                                                       Text="{Binding SelectedSource.Environment, Converter={StaticResource EnumStr}}"
+                                                       FontFamily="{StaticResource PrimaryFont}"
+                                                       FontSize="11"/>
+
+											<TextBlock Grid.Row="2" Grid.Column="0" Text="Server"
+                                                       Style="{StaticResource TextCaption}"/>
+											<TextBlock Grid.Row="2" Grid.Column="1"
+                                                       Text="{Binding SelectedSource.Server}"
+                                                       FontFamily="{StaticResource MonoFont}"
+                                                       FontSize="11"/>
+
+											<TextBlock Grid.Row="3" Grid.Column="0" Text="Database"
+                                                       Style="{StaticResource TextCaption}"/>
+											<TextBlock Grid.Row="3" Grid.Column="1"
+                                                       Text="{Binding SelectedSource.DatabaseName}"
+                                                       FontFamily="{StaticResource MonoFont}"
+                                                       FontSize="11"/>
+										</Grid>
+									</StackPanel>
+								</Border>
+							</StackPanel>
+						</Border>
+
+						<!-- Arrow -->
+						<TextBlock Grid.Column="1"
+                                   Text="⇌"
+                                   FontSize="24"
+                                   Foreground="{DynamicResource AccentBrush}"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"/>
+
+						<!-- Target -->
+						<Border Grid.Column="2"
+                                Background="{DynamicResource SurfaceElevatedBrush}"
+                                BorderBrush="{DynamicResource DeletedBrush}"
+                                BorderThickness="1"
+                                CornerRadius="8"
+                                Padding="16">
+							<StackPanel helpers:StackPanelHelper.Spacing="10">
+								<StackPanel Orientation="Horizontal" helpers:StackPanelHelper.Spacing="8">
+									<Border Width="8" Height="8"
+                                            Background="{DynamicResource DeletedBrush}"
+                                            CornerRadius="4"/>
+									<TextBlock Text="TARGET DATABASE"
+                                               FontSize="10" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource DeletedBrush}"
+                                               FontFamily="{StaticResource PrimaryFont}"
+                                               VerticalAlignment="Center"/>
+								</StackPanel>
+
+								<ComboBox TabIndex="2" Style="{StaticResource ModernComboBoxStyle}"
+                                          ItemsSource="{Binding Connections}"
+                                          SelectedItem="{Binding SelectedTarget}"
+                                          DisplayMemberPath="DisplayName"/>
+
+								<Border Background="{DynamicResource SurfaceBrush}"
+                                        CornerRadius="6"
+                                        Padding="12,10"
+                                        Visibility="{Binding SelectedTarget,
+                                             Converter={StaticResource BoolVis},
+                                             ConverterParameter=notNull}">
+									<StackPanel helpers:StackPanelHelper.Spacing="4">
+										<Grid>
+											<Grid.ColumnDefinitions>
+												<ColumnDefinition Width="90"/>
+												<ColumnDefinition/>
+											</Grid.ColumnDefinitions>
+											<Grid.RowDefinitions>
+												<RowDefinition/>
+												<RowDefinition/>
+												<RowDefinition/>
+												<RowDefinition/>
+											</Grid.RowDefinitions>
+
+											<TextBlock Grid.Row="0" Grid.Column="0" Text="Type"
+                                                       Style="{StaticResource TextCaption}"/>
+											<TextBlock Grid.Row="0" Grid.Column="1"
+                                                       Text="{Binding SelectedTarget.DatabaseType, Converter={StaticResource EnumStr}}"
+                                                       FontFamily="{StaticResource PrimaryFont}"
+                                                       FontSize="11"/>
+
+											<TextBlock Grid.Row="1" Grid.Column="0" Text="Environment"
+                                                       Style="{StaticResource TextCaption}"/>
+											<TextBlock Grid.Row="1" Grid.Column="1"
+                                                       Text="{Binding SelectedTarget.Environment, Converter={StaticResource EnumStr}}"
+                                                       FontFamily="{StaticResource PrimaryFont}"
+                                                       FontSize="11"/>
+
+											<TextBlock Grid.Row="2" Grid.Column="0" Text="Server"
+                                                       Style="{StaticResource TextCaption}"/>
+											<TextBlock Grid.Row="2" Grid.Column="1"
+                                                       Text="{Binding SelectedTarget.Server}"
+                                                       FontFamily="{StaticResource MonoFont}"
+                                                       FontSize="11"/>
+
+											<TextBlock Grid.Row="3" Grid.Column="0" Text="Database"
+                                                       Style="{StaticResource TextCaption}"/>
+											<TextBlock Grid.Row="3" Grid.Column="1"
+                                                       Text="{Binding SelectedTarget.DatabaseName}"
+                                                       FontFamily="{StaticResource MonoFont}"
+                                                       FontSize="11"/>
+										</Grid>
+									</StackPanel>
+								</Border>
+							</StackPanel>
+						</Border>
+					</Grid>
+				</StackPanel>
+			</Border>
+
+			<!-- Compare Options Card -->
+			<Border Style="{StaticResource CardStyle}">
+				<StackPanel helpers:StackPanelHelper.Spacing="16">
+					<TextBlock Text="Comparison Options"
+                               Style="{StaticResource TextHeading3}"/>
+
+					<Grid>
+						<Grid.ColumnDefinitions>
+							<ColumnDefinition Width="*"/>
+							<ColumnDefinition Width="16"/>
+							<ColumnDefinition Width="*"/>
+							<ColumnDefinition Width="16"/>
+							<ColumnDefinition Width="Auto"/>
+						</Grid.ColumnDefinitions>
+
+						<StackPanel Grid.Column="0" helpers:StackPanelHelper.Spacing="6">
+							<TextBlock Text="Compare Type"
+                                       Style="{StaticResource TextCaption}"/>
+							<ComboBox TabIndex="3" Style="{StaticResource ModernComboBoxStyle}"
+                                      ItemsSource="{Binding CompareTypes}"
+                                      SelectedItem="{Binding SelectedCompareType}"
+                                      DisplayMemberPath="Display"/>
+						</StackPanel>
+
+						<StackPanel Grid.Column="2" helpers:StackPanelHelper.Spacing="6">
+							<TextBlock Text="Comparison Scope"
+                                       Style="{StaticResource TextCaption}"/>
+							<ComboBox TabIndex="4" Style="{StaticResource ModernComboBoxStyle}"
+                                      ItemsSource="{Binding ComparisonScopes}"
+                                      SelectedItem="{Binding SelectedComparisonScope}"
+                                      DisplayMemberPath="Display"
+                                      IsEnabled="{Binding IsScopeSelectionEnabled}"/>
+						</StackPanel>
+
+						<StackPanel Grid.Column="4" VerticalAlignment="Bottom" Margin="0,0,0,6">
+							<CheckBox TabIndex="5" Style="{StaticResource ModernCheckBoxStyle}"
+                                      IsChecked="{Binding IncludeUnchanged}"
+                                      Content="Include unchanged objects"/>
+						</StackPanel>
+					</Grid>
+
+					<!-- Object Selection Area -->
+					<StackPanel Visibility="{Binding IsObjectSelectionVisible, Converter={StaticResource BoolVis}}"
+                                Margin="0,4,0,0"
+                                helpers:StackPanelHelper.Spacing="10">
+						<Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" Padding="0,12,0,0">
+							<Grid>
+								<Grid.ColumnDefinitions>
+									<ColumnDefinition Width="*"/>
+									<ColumnDefinition Width="Auto"/>
+								</Grid.ColumnDefinitions>
+								<TextBlock Grid.Column="0" Text="Select Objects to Compare"
+                                           Style="{StaticResource TextHeading3}" FontSize="13"/>
+								<TextBlock Grid.Column="1" 
+                                           Text="{Binding SelectedCountText}"
+                                           Style="{StaticResource TextCaption}"
+                                           VerticalAlignment="Center"/>
+							</Grid>
+						</Border>
+
+						<!-- Search and Loading Indicator -->
+						<Grid>
+							<Grid.ColumnDefinitions>
+								<ColumnDefinition Width="*"/>
+								<ColumnDefinition Width="Auto"/>
+							</Grid.ColumnDefinitions>
+							<Grid Grid.Column="0">
+								<TextBox TabIndex="6" Style="{StaticResource ModernTextBoxStyle}"
+										 Text="{Binding ObjectSearchText, UpdateSourceTrigger=PropertyChanged}"
+										 Padding="30,6,10,6"
+										 Height="32"/>
+								<TextBlock Text="🔍" FontSize="12"
+										   Margin="9,0,0,0"
+										   VerticalAlignment="Center"
+										   IsHitTestVisible="False"
+										   Foreground="{DynamicResource TextSecondaryBrush}"/>
+							</Grid>
+							<controls:LoadingSpinner Grid.Column="1"
+                                                     Margin="8,0,0,0"
+                                                     SpinnerSize="20"
+                                                     Visibility="{Binding IsLoadingObjects, Converter={StaticResource BoolVis}}"/>
+						</Grid>
+
+						<!-- Single Object Selection -->
+						<ComboBox TabIndex="7" Visibility="{Binding IsSingleObjectScope, Converter={StaticResource BoolVis}}"
+                                  Style="{StaticResource ModernComboBoxStyle}"
+                                  ItemsSource="{Binding FilteredAvailableObjects}"
+                                  SelectedItem="{Binding SelectedSingleObject}"
+                                  DisplayMemberPath="Name"
+                                  Height="32"/>
+
+						<!-- Multiple Objects Selection -->
+						<Border Visibility="{Binding IsMultipleObjectsScope, Converter={StaticResource BoolVis}}"
+                                BorderBrush="{DynamicResource BorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="6"
+                                Background="{DynamicResource SurfaceBrush}"
+                                Height="200"
+                                Padding="4">
+							<ScrollViewer VerticalScrollBarVisibility="Auto">
+								<ItemsControl ItemsSource="{Binding FilteredAvailableObjects}">
+									<ItemsControl.ItemTemplate>
+										<DataTemplate>
+											<CheckBox Style="{StaticResource ModernCheckBoxStyle}"
+                                                      IsChecked="{Binding IsSelected}"
+                                                      Content="{Binding Name}"
+                                                      Margin="8,4"
+                                                      VerticalAlignment="Center"/>
+										</DataTemplate>
+									</ItemsControl.ItemTemplate>
+								</ItemsControl>
+							</ScrollViewer>
+						</Border>
+					</StackPanel>
+
+					<!-- Compare Type descriptions -->
+					<Border Background="{DynamicResource SurfaceElevatedBrush}"
+                            CornerRadius="6"
+                            Padding="14,10">
+						<WrapPanel Orientation="Horizontal">
+							<TextBlock Text="📊 Database — "
+                                       FontSize="11" FontWeight="SemiBold"
+                                       FontFamily="{StaticResource PrimaryFont}"
+                                       Foreground="{DynamicResource AccentBrush}"/>
+							<TextBlock Text="Full schema comparison including all object types  "
+                                       FontSize="11"
+                                       FontFamily="{StaticResource PrimaryFont}"
+                                       Foreground="{DynamicResource TextSecondaryBrush}"/>
+							<TextBlock Text="⚙ Procedure — "
+                                       FontSize="11" FontWeight="SemiBold"
+                                       FontFamily="{StaticResource PrimaryFont}"
+                                       Foreground="{DynamicResource AccentBrush}"/>
+							<TextBlock Text="Side-by-side diff with parameter &amp; logic comparison"
+                                       FontSize="11"
+                                       FontFamily="{StaticResource PrimaryFont}"
+                                       Foreground="{DynamicResource TextSecondaryBrush}"/>
+						</WrapPanel>
+					</Border>
+				</StackPanel>
+			</Border>
+
+			<!-- Run Compare -->
+			<Border Style="{StaticResource CardStyle}">
+				<StackPanel helpers:StackPanelHelper.Spacing="14">
+					<Grid>
+						<Grid.ColumnDefinitions>
+							<ColumnDefinition/>
+							<ColumnDefinition Width="Auto"/>
+						</Grid.ColumnDefinitions>
+
+						<StackPanel Grid.Column="0" VerticalAlignment="Center">
+							<TextBlock Text="Run Comparison"
+                                       Style="{StaticResource TextHeading3}"/>
+							<TextBlock Text="{Binding StatusMessage}"
+                                       Style="{StaticResource TextCaption}"
+                                       Margin="0,4,0,0"/>
+						</StackPanel>
+
+						<StackPanel Grid.Column="1" Orientation="Horizontal" helpers:StackPanelHelper.Spacing="12" VerticalAlignment="Center">
+							<controls:LoadingSpinner x:Name="CompareSpinner"
+                                                     SpinnerSize="28"
+                                                     Visibility="{Binding IsComparing, Converter={StaticResource BoolVis}}"/>
+							<Button TabIndex="8" Content="▶  Run Comparison"
+                                    Style="{StaticResource PrimaryButtonStyle}"
+                                    Height="40"
+                                    Padding="24,0"
+                                    FontSize="13"
+                                    IsEnabled="{Binding CanCompare}"
+                                    Command="{Binding RunCompareCommand}"/>
+						</StackPanel>
+					</Grid>
+
+					<!-- Progress Bar -->
+					<ProgressBar Style="{StaticResource ModernProgressBarStyle}"
+                                 Value="{Binding ProgressValue}"
+                                 Maximum="100"
+                                 Visibility="{Binding IsComparing, Converter={StaticResource BoolVis}}"/>
+				</StackPanel>
+			</Border>
+
+		</StackPanel>
+	</ScrollViewer>
+</UserControl>

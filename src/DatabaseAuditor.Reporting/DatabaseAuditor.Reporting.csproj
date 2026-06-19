@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
     <ProjectReference Include="..\DatabaseAuditor.Domain\DatabaseAuditor.Domain.csproj" />
@@ -8,6 +8,7 @@
   <ItemGroup>
     <PackageReference Include="ClosedXML" Version="0.105.0" />
     <PackageReference Include="QuestPDF" Version="2026.5.0" />
+    <PackageReference Include="Serilog" Version="4.3.1" />
   </ItemGroup>
 
   <PropertyGroup>

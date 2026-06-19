@@ -12,4 +12,5 @@ public class ProcedureSchema : SchemaObject
     public string? ReturnType { get; set; }
     public bool IsSystemObject { get; set; }
     public string? NormalizedDefinition { get; set; }
+    public List<ParameterSchema> Parameters { get; set; } = [];
 }

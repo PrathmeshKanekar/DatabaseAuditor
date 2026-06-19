@@ -20,16 +20,9 @@ public static class DependencyInjection
         services.AddSingleton<MySqlProvider>();
         services.AddSingleton<MariaDbProvider>();
 
-        // Register factory
         services.AddSingleton<DatabaseProviderFactory>();
-
-        // Register IDatabaseProvider via factory adapter
-        services.AddSingleton<IDatabaseProvider>(provider =>
-        {
-            var factory = provider.GetRequiredService<DatabaseProviderFactory>();
-            // Default to SqlServer; runtime resolution via factory per connection
-            return factory.GetProvider(Domain.Enums.DatabaseType.SqlServer);
-        });
+        services.AddSingleton<IDatabaseProviderResolver>(provider =>
+            provider.GetRequiredService<DatabaseProviderFactory>());
 
         return services;
     }

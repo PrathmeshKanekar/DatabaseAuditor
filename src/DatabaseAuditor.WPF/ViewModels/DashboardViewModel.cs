@@ -2,109 +2,67 @@ namespace DatabaseAuditor.WPF.ViewModels;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using DatabaseAuditor.Application.Services;
-using DatabaseAuditor.Domain.ValueObjects;
-using Serilog;
+using DatabaseAuditor.Domain.Interfaces;
+using System.Collections.ObjectModel;
 
 public partial class DashboardViewModel : ObservableObject
 {
-    private readonly ConnectionService _connectionService;
+    private readonly IConnectionRepository _connectionRepository;
 
-    [ObservableProperty]
-    private int _totalConnections;
+    [ObservableProperty] private int _totalConnections;
+    [ObservableProperty] private int _productionConnections;
+    [ObservableProperty] private int _devConnections;
+    [ObservableProperty] private int _totalComparisons;
+    [ObservableProperty] private bool _isLoading;
+    [ObservableProperty] private string _lastComparedAt = "Never";
 
-    [ObservableProperty]
-    private int _totalComparisons;
+    public ObservableCollection<DashboardConnectionItem> RecentConnections { get; } = [];
 
-    [ObservableProperty]
-    private int _totalAdded;
-
-    [ObservableProperty]
-    private int _totalDeleted;
-
-    [ObservableProperty]
-    private int _totalModified;
-
-    [ObservableProperty]
-    private bool _isLoading;
-
-    [ObservableProperty]
-    private string _lastComparedAt = "Never";
-
-    [ObservableProperty]
-    private string _welcomeMessage = $"Welcome back, {Environment.UserName}";
-
-    [ObservableProperty]
-    private List<RecentActivity> _recentActivities = [];
-
-    [ObservableProperty]
-    private CompareSession? _lastSession;
-
-    public DashboardViewModel(ConnectionService connectionService)
+    public DashboardViewModel(IConnectionRepository connectionRepository)
     {
-        _connectionService = connectionService;
+        _connectionRepository = connectionRepository;
     }
 
     [RelayCommand]
-    private async Task LoadAsync()
+    public async Task LoadAsync()
     {
         IsLoading = true;
         try
         {
-            var connections = await _connectionService.GetAllAsync();
+            var connections = await _connectionRepository.GetAllAsync();
             TotalConnections = connections.Count;
-            Log.Information("[Dashboard] Loaded. Connections={Count}", TotalConnections);
-        }
-        catch (Exception ex)
-        {
-            Log.Error(ex, "[Dashboard] Failed to load");
+            ProductionConnections = connections.Count(c =>
+                c.Environment == Domain.Enums.EnvironmentType.Production);
+            DevConnections = connections.Count(c =>
+                c.Environment == Domain.Enums.EnvironmentType.Development);
+
+            RecentConnections.Clear();
+            foreach (var conn in connections.TakeLast(5).Reverse())
+            {
+                RecentConnections.Add(new DashboardConnectionItem
+                {
+                    Name = conn.Name,
+                    Environment = conn.Environment.ToString(),
+                    DatabaseType = conn.DatabaseType.ToString(),
+                    Server = conn.Server,
+                    Database = conn.DatabaseName,
+                    CreatedAt = conn.CreatedAt.ToString("yyyy-MM-dd")
+                });
+            }
         }
         finally
         {
             IsLoading = false;
         }
     }
-
-    [RelayCommand]
-    private async Task RefreshAsync()
-        => await LoadAsync();
-
-    public void ApplySession(CompareSession session)
-    {
-        LastSession = session;
-        TotalAdded = session.AddedCount;
-        TotalDeleted = session.DeletedCount;
-        TotalModified = session.ModifiedCount;
-        TotalComparisons++;
-        LastComparedAt = session.CompletedAt?.ToString("yyyy-MM-dd HH:mm:ss") ?? "Unknown";
-
-        RecentActivities.Insert(0, new RecentActivity
-        {
-            Description = $"Compared {session.Source.DatabaseName} vs {session.Target.DatabaseName}",
-            CompareType = session.CompareType.ToString(),
-            ResultSummary = $"+{session.AddedCount} / -{session.DeletedCount} / ~{session.ModifiedCount}",
-            OccurredAt = session.CompletedAt ?? DateTime.Now,
-            IsSuccess = session.IsSuccess
-        });
-
-        if (RecentActivities.Count > 10)
-            RecentActivities = RecentActivities.Take(10).ToList();
-
-        OnPropertyChanged(nameof(RecentActivities));
-    }
 }
 
-public class RecentActivity
+public class DashboardConnectionItem
 {
-    public string Description { get; set; } = string.Empty;
-    public string CompareType { get; set; } = string.Empty;
-    public string ResultSummary { get; set; } = string.Empty;
-    public DateTime OccurredAt { get; set; }
-    public bool IsSuccess { get; set; }
-
-    public string OccurredAtDisplay =>
-        OccurredAt.ToString("yyyy-MM-dd HH:mm");
-
-    public string StatusIcon =>
-        IsSuccess ? "✓" : "✕";
+    public string Name { get; set; } = string.Empty;
+    public string Environment { get; set; } = string.Empty;
+    public string DatabaseType { get; set; } = string.Empty;
+    public string Server { get; set; } = string.Empty;
+    public string Database { get; set; } = string.Empty;
+    public string CreatedAt { get; set; } = string.Empty;
 }

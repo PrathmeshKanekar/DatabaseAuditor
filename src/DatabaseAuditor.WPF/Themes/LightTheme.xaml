@@ -23,10 +23,10 @@
     <Color x:Key="TextOnAccentColor">#FFFFFFFF</Color>
 
     <!-- ===================== NAVIGATION ===================== -->
-    <Color x:Key="NavBackgroundColor">#FF2C2C2C</Color>
-    <Color x:Key="NavItemHoverColor">#FF3A3A3A</Color>
-    <Color x:Key="NavItemActiveColor">#FFFFFFFF</Color>
-    <Color x:Key="NavItemActiveBgColor">#FF0078D4</Color>
+    <Color x:Key="NavBackgroundColor">#FFF0F2F5</Color>
+    <Color x:Key="NavItemHoverColor">#FFE1E4E8</Color>
+    <Color x:Key="NavItemActiveColor">#FF0078D4</Color>
+    <Color x:Key="NavItemActiveBgColor">#FFFFFFFF</Color>
 
     <!-- ===================== STATUS ===================== -->
     <Color x:Key="AddedColor">#FF2E7D32</Color>
@@ -93,6 +93,7 @@
 
     <SolidColorBrush x:Key="GridHeaderBgBrush"       Color="{StaticResource GridHeaderBgColor}"/>
     <SolidColorBrush x:Key="GridRowAltBrush"         Color="{StaticResource GridRowAltColor}"/>
+    <SolidColorBrush x:Key="GridRowHoverBrush"       Color="#FFEAEAEA"/>
     <SolidColorBrush x:Key="GridSelectionBrush"      Color="{StaticResource GridSelectionColor}"/>
     <SolidColorBrush x:Key="GridBorderBrush"         Color="{StaticResource GridBorderColor}"/>
 

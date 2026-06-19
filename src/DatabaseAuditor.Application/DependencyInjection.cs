@@ -3,6 +3,7 @@ namespace DatabaseAuditor.Application;
 using DatabaseAuditor.Application.Services;
 using DatabaseAuditor.Application.UseCases.CompareDatabase;
 using DatabaseAuditor.Application.UseCases.ExportReport;
+using DatabaseAuditor.Application.UseCases.SyncColumns;
 using DatabaseAuditor.Application.Validators;
 using DatabaseAuditor.Domain.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
@@ -12,12 +13,14 @@ public static class DependencyInjection
     public static IServiceCollection AddApplication(this IServiceCollection services)
     {
         // Services
-        services.AddScoped<ICompareService, CompareService>();
-        services.AddScoped<ConnectionService>();
+        services.AddTransient<ICompareService, CompareService>();
+        services.AddTransient<ConnectionService>();
+        services.AddTransient<DatabaseObjectService>();
 
         // Handlers
-        services.AddScoped<CompareDatabaseHandler>();
-        services.AddScoped<ExportReportHandler>();
+        services.AddTransient<CompareDatabaseHandler>();
+        services.AddTransient<ExportReportHandler>();
+        services.AddTransient<SyncColumnsHandler>();
 
         // Validators
         services.AddSingleton<ConnectionProfileValidator>();

@@ -5,42 +5,31 @@ using CommunityToolkit.Mvvm.Input;
 using DatabaseAuditor.Application.Services;
 using DatabaseAuditor.Application.UseCases.ManageConnections;
 using DatabaseAuditor.Domain.Entities;
+using DatabaseAuditor.Domain.Enums;
+using DatabaseAuditor.WPF.Converters;
 using DatabaseAuditor.WPF.Helpers;
-using Serilog;
+using DatabaseAuditor.WPF.ViewModels.Dialogs;
+using DatabaseAuditor.WPF.Views.Dialogs;
+using Microsoft.Extensions.DependencyInjection;
 using System.Collections.ObjectModel;
 
 public partial class ConnectionsViewModel : ObservableObject
 {
     private readonly ConnectionService _connectionService;
     private readonly IDialogService _dialogService;
-    private List<ConnectionProfile> _allConnections = [];
 
-    [ObservableProperty]
-    private ObservableCollection<ConnectionProfile> _connections = [];
+    [ObservableProperty] private bool _isLoading;
+    [ObservableProperty] private ConnectionProfile? _selectedConnection;
+    [ObservableProperty] private string _searchText = string.Empty;
+    [ObservableProperty] private string _filterEnvironment = "All";
+    [ObservableProperty] private string _statusMessage = string.Empty;
+    [ObservableProperty] private bool _isTesting;
 
-    [ObservableProperty]
-    private ConnectionProfile? _selectedConnection;
+    public ObservableCollection<ConnectionProfile> Connections { get; } = [];
+    public ObservableCollection<ConnectionProfile> FilteredConnections { get; } = [];
 
-    [ObservableProperty]
-    private string _searchText = string.Empty;
-
-    [ObservableProperty]
-    private bool _isLoading;
-
-    [ObservableProperty]
-    private bool _isTesting;
-
-    [ObservableProperty]
-    private string _statusMessage = string.Empty;
-
-    [ObservableProperty]
-    private bool _hasConnections;
-
-    [ObservableProperty]
-    private int _totalCount;
-
-    [ObservableProperty]
-    private int _filteredCount;
+    public List<string> EnvironmentFilters { get; } =
+        ["All", "Development", "QA", "UAT", "Staging", "Production"];
 
     public ConnectionsViewModel(
         ConnectionService connectionService,
@@ -50,236 +39,197 @@ public partial class ConnectionsViewModel : ObservableObject
         _dialogService = dialogService;
     }
 
-    partial void OnSearchTextChanged(string value)
-        => ApplyFilter(value);
+    partial void OnSearchTextChanged(string value) => ApplyFilter();
+    partial void OnFilterEnvironmentChanged(string value) => ApplyFilter();
 
     [RelayCommand]
-    private async Task LoadAsync()
+    public async Task LoadAsync()
     {
         IsLoading = true;
-        StatusMessage = string.Empty;
-
         try
         {
-            _allConnections = await _connectionService.GetAllAsync();
-            ApplyFilter(SearchText);
-            TotalCount = _allConnections.Count;
-            HasConnections = _allConnections.Count > 0;
+            var all = await _connectionService.GetAllAsync();
+            Connections.Clear();
+            foreach (var c in all) Connections.Add(c);
+            ApplyFilter();
+        }
+        finally { IsLoading = false; }
+    }
 
-            Log.Information("[Connections] Loaded {Count} connections", TotalCount);
-        }
-        catch (Exception ex)
+    private void ApplyFilter()
+    {
+        FilteredConnections.Clear();
+        var query = Connections.AsEnumerable();
+
+        if (!string.IsNullOrWhiteSpace(SearchText))
         {
-            StatusMessage = $"Failed to load connections: {ex.Message}";
-            Log.Error(ex, "[Connections] Load failed");
+            var search = SearchText.Trim().ToLowerInvariant();
+            query = query.Where(c =>
+                c.Name.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+                c.Server.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+                c.DatabaseName.Contains(search, StringComparison.OrdinalIgnoreCase));
         }
-        finally
-        {
-            IsLoading = false;
-        }
+
+        if (FilterEnvironment != "All" &&
+            Enum.TryParse<EnvironmentType>(FilterEnvironment, out var env))
+            query = query.Where(c => c.Environment == env);
+
+        foreach (var c in query) FilteredConnections.Add(c);
     }
 
     [RelayCommand]
-    private async Task RefreshAsync()
-        => await LoadAsync();
-
-    [RelayCommand]
-    private async Task AddConnectionAsync()
+    public async Task AddConnectionAsync()
     {
-        var dialog = App.ServiceProvider
-            .GetRequiredService<Views.Dialogs.AddConnectionDialog>();
-
+        var vm = App.ServiceProvider.GetRequiredService<AddConnectionViewModel>();
+        var dialog = new AddConnectionDialog(vm) { Owner = App.Current.MainWindow };
         dialog.InitializeForAdd();
 
-        var result = await _dialogService.ShowDialogAsync<ViewModels.Dialogs.AddConnectionViewModel>(dialog);
-
-        if (result == null) return;
-
-        var command = new AddConnectionCommand
+        if (dialog.ShowDialog() == true)
         {
-            Name = result.Name,
-            Environment = result.SelectedEnvironment,
-            DatabaseType = result.SelectedDatabaseType,
-            Server = result.Server,
-            Port = result.Port,
-            DatabaseName = result.DatabaseName,
-            Username = result.Username,
-            Password = result.Password
-        };
+            var cmd = new AddConnectionCommand
+            {
+                Name = vm.Name,
+                Environment = vm.SelectedEnvironment,
+                DatabaseType = vm.SelectedDatabaseType,
+                Server = vm.Server,
+                Port = vm.Port,
+                DatabaseName = vm.DatabaseName,
+                Username = vm.Username,
+                Password = vm.Password
+            };
 
-        var validation = await _connectionService.AddAsync(command);
-
-        if (!validation.IsValid)
-        {
-            _dialogService.ShowError("Validation Error",
-                string.Join(Environment.NewLine, validation.Errors));
-            return;
+            var result = await _connectionService.AddAsync(cmd);
+            if (result.IsValid)
+            {
+                await LoadAsync();
+                StatusMessage = $"Connection '{vm.Name}' added successfully.";
+            }
+            else
+            {
+                _dialogService.ShowError("Validation Error",
+                    string.Join("\n", result.Errors));
+            }
         }
-
-        await LoadAsync();
-        StatusMessage = $"Connection '{command.Name}' added successfully.";
-        Log.Information("[Connections] Added connection: {Name}", command.Name);
     }
 
     [RelayCommand]
-    private async Task EditConnectionAsync()
+    public async Task EditConnectionAsync()
     {
         if (SelectedConnection == null) return;
 
-        var dialog = App.ServiceProvider
-            .GetRequiredService<Views.Dialogs.AddConnectionDialog>();
-
+        var vm = App.ServiceProvider.GetRequiredService<AddConnectionViewModel>();
+        var dialog = new AddConnectionDialog(vm) { Owner = App.Current.MainWindow };
         dialog.InitializeForEdit(SelectedConnection);
 
-        var result = await _dialogService.ShowDialogAsync<ViewModels.Dialogs.AddConnectionViewModel>(dialog);
-
-        if (result == null) return;
-
-        var command = new EditConnectionCommand
+        if (dialog.ShowDialog() == true)
         {
-            Id = SelectedConnection.Id,
-            Name = result.Name,
-            Environment = result.SelectedEnvironment,
-            DatabaseType = result.SelectedDatabaseType,
-            Server = result.Server,
-            Port = result.Port,
-            DatabaseName = result.DatabaseName,
-            Username = result.Username,
-            Password = result.Password
-        };
+            var cmd = new EditConnectionCommand
+            {
+                Id = SelectedConnection.Id,
+                Name = vm.Name,
+                Environment = vm.SelectedEnvironment,
+                DatabaseType = vm.SelectedDatabaseType,
+                Server = vm.Server,
+                Port = vm.Port,
+                DatabaseName = vm.DatabaseName,
+                Username = vm.Username,
+                Password = vm.Password
+            };
 
-        var validation = await _connectionService.UpdateAsync(command);
-
-        if (!validation.IsValid)
-        {
-            _dialogService.ShowError("Validation Error",
-                string.Join(Environment.NewLine, validation.Errors));
-            return;
+            var result = await _connectionService.UpdateAsync(cmd);
+            if (result.IsValid)
+            {
+                await LoadAsync();
+                StatusMessage = $"Connection '{vm.Name}' updated.";
+            }
+            else
+            {
+                _dialogService.ShowError("Validation Error",
+                    string.Join("\n", result.Errors));
+            }
         }
-
-        await LoadAsync();
-        StatusMessage = $"Connection '{command.Name}' updated successfully.";
-        Log.Information("[Connections] Updated connection: {Name}", command.Name);
     }
 
     [RelayCommand]
-    private async Task DeleteConnectionAsync()
+    public async Task DeleteConnectionAsync()
     {
         if (SelectedConnection == null) return;
 
-        var confirmed = await _dialogService.ShowConfirmationAsync(
+        var confirm = await _dialogService.ShowConfirmationAsync(
             "Delete Connection",
-            $"Are you sure you want to delete '{SelectedConnection.Name}'?");
+            $"Are you sure you want to delete '{SelectedConnection.Name}'?\nThis action cannot be undone.");
 
-        if (!confirmed) return;
+        if (!confirm) return;
 
-        try
-        {
-            await _connectionService.DeleteAsync(SelectedConnection.Id);
-            await LoadAsync();
-            StatusMessage = "Connection deleted successfully.";
-            Log.Information("[Connections] Deleted connection: {Name}", SelectedConnection.Name);
-        }
-        catch (Exception ex)
-        {
-            _dialogService.ShowError("Delete Failed", ex.Message);
-            Log.Error(ex, "[Connections] Delete failed");
-        }
+        await _connectionService.DeleteAsync(SelectedConnection.Id);
+        await LoadAsync();
+        StatusMessage = "Connection deleted.";
     }
 
     [RelayCommand]
-    private async Task TestConnectionAsync()
+    public async Task TestConnectionAsync()
     {
         if (SelectedConnection == null) return;
 
         IsTesting = true;
-        StatusMessage = $"Testing connection to '{SelectedConnection.Name}'...";
+        StatusMessage = $"Testing connection to {SelectedConnection.Server}...";
 
         try
         {
-            var success = await _connectionService.TestConnectionAsync(
+            var ok = await _connectionService.TestConnectionAsync(
                 SelectedConnection.Id,
                 CancellationToken.None);
 
-            StatusMessage = success
-                ? $"✓ Connection to '{SelectedConnection.Name}' successful."
-                : $"✕ Connection to '{SelectedConnection.Name}' failed.";
-
-            Log.Information("[Connections] Test result for {Name}: {Success}",
-                SelectedConnection.Name, success);
+            StatusMessage = ok
+                ? $"✓ Connection to '{SelectedConnection.Name}' succeeded."
+                : $"✗ Connection to '{SelectedConnection.Name}' failed.";
         }
         catch (Exception ex)
         {
-            StatusMessage = $"✕ Test failed: {ex.Message}";
-            Log.Error(ex, "[Connections] Test connection failed");
+            StatusMessage = $"Error: {ex.Message}";
         }
-        finally
-        {
-            IsTesting = false;
-        }
+        finally { IsTesting = false; }
     }
 
     [RelayCommand]
-    private async Task ImportConnectionsAsync()
+    public async Task ImportConnectionsAsync()
     {
-        var filePath = _dialogService.ShowOpenFileDialog(
+        var path = _dialogService.ShowOpenFileDialog(
             "Import Connections",
             "JSON Files (*.json)|*.json");
 
-        if (filePath == null) return;
+        if (path == null) return;
 
         try
         {
-            var imported = await _connectionService.ImportAsync(filePath);
+            var profiles = await _connectionService.ImportAsync(path);
             await LoadAsync();
-            StatusMessage = $"Imported {imported.Count} connection(s) successfully.";
-            Log.Information("[Connections] Imported {Count} connections from {Path}",
-                imported.Count, filePath);
+            StatusMessage = $"Imported {profiles.Count} connection(s).";
         }
         catch (Exception ex)
         {
             _dialogService.ShowError("Import Failed", ex.Message);
-            Log.Error(ex, "[Connections] Import failed");
         }
     }
 
     [RelayCommand]
-    private async Task ExportConnectionsAsync()
+    public async Task ExportConnectionsAsync()
     {
-        var filePath = _dialogService.ShowSaveFileDialog(
+        var path = _dialogService.ShowSaveFileDialog(
             "Export Connections",
             "JSON Files (*.json)|*.json",
             "connections_export.json");
 
-        if (filePath == null) return;
+        if (path == null) return;
 
         try
         {
-            await _connectionService.ExportAsync(filePath);
-            StatusMessage = $"Exported {_allConnections.Count} connection(s) to {filePath}";
-            Log.Information("[Connections] Exported to {Path}", filePath);
+            await _connectionService.ExportAsync(path);
+            StatusMessage = "Connections exported successfully.";
         }
         catch (Exception ex)
         {
             _dialogService.ShowError("Export Failed", ex.Message);
-            Log.Error(ex, "[Connections] Export failed");
         }
-    }
-
-    private void ApplyFilter(string search)
-    {
-        var filtered = string.IsNullOrWhiteSpace(search)
-            ? _allConnections
-            : _allConnections.Where(c =>
-                c.Name.Contains(search, StringComparison.OrdinalIgnoreCase) ||
-                c.Server.Contains(search, StringComparison.OrdinalIgnoreCase) ||
-                c.DatabaseName.Contains(search, StringComparison.OrdinalIgnoreCase) ||
-                c.Environment.ToString().Contains(search, StringComparison.OrdinalIgnoreCase) ||
-                c.DatabaseType.ToString().Contains(search, StringComparison.OrdinalIgnoreCase))
-            .ToList();
-
-        Connections = new ObservableCollection<ConnectionProfile>(filtered);
-        FilteredCount = filtered.Count;
-        HasConnections = filtered.Count > 0;
     }
 }

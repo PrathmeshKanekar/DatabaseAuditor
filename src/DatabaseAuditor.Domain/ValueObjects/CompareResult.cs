@@ -14,9 +14,13 @@ public class CompareResult
     public string? TargetValue { get; set; }
     public string? ParentObject { get; set; }
     public List<string> Differences { get; set; } = [];
+    public string? SyncScript { get; set; }
+    public bool IsSelected { get; set; }
     public DateTime DetectedAt { get; set; } = DateTime.UtcNow;
 
     public string FullObjectName => string.IsNullOrEmpty(SchemaName)
         ? ObjectName
         : $"{SchemaName}.{ObjectName}";
+
+    public string AllDifferences => string.Join(System.Environment.NewLine, Differences);
 }

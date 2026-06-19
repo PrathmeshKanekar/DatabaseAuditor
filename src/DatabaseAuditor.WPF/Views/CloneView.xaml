@@ -1,0 +1,702 @@
+<UserControl x:Class="DatabaseAuditor.WPF.Views.CloneView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:converters="clr-namespace:DatabaseAuditor.WPF.Converters"
+             xmlns:controls="clr-namespace:DatabaseAuditor.WPF.Controls"
+             xmlns:helpers="clr-namespace:DatabaseAuditor.WPF.Helpers"
+             Background="{DynamicResource BackgroundBrush}">
+
+	<UserControl.Resources>
+		<converters:EnumToStringConverter x:Key="EnumStr"/>
+		<converters:BoolToVisibilityConverter x:Key="BoolVis"/>
+		<converters:InverseBoolToVisibilityConverter x:Key="InvBoolVis"/>
+		<converters:NullToVisibilityConverter x:Key="NullVis"/>
+	</UserControl.Resources>
+
+	<ScrollViewer VerticalScrollBarVisibility="Auto">
+		<StackPanel Margin="24" helpers:StackPanelHelper.Spacing="20">
+
+			<!-- Connection Selection Card -->
+			<Border Style="{StaticResource CardStyle}">
+				<StackPanel>
+					<TextBlock Text="Select Databases for Cloning"
+                               Style="{StaticResource TextHeading3}"
+                               Margin="0,0,0,4"/>
+					<TextBlock Text="Choose source database containing tables to clone, and the empty target database."
+                               Style="{StaticResource TextCaption}"
+                               Margin="0,0,0,20"/>
+
+					<Grid>
+						<Grid.ColumnDefinitions>
+							<ColumnDefinition/>
+							<ColumnDefinition Width="60"/>
+							<ColumnDefinition/>
+						</Grid.ColumnDefinitions>
+
+						<!-- Source -->
+						<Border Grid.Column="0"
+                                Background="{DynamicResource SurfaceElevatedBrush}"
+                                BorderBrush="{DynamicResource AddedBrush}"
+                                BorderThickness="1"
+                                CornerRadius="8"
+                                Padding="16">
+							<StackPanel helpers:StackPanelHelper.Spacing="10">
+								<StackPanel Orientation="Horizontal" helpers:StackPanelHelper.Spacing="8">
+									<Border Width="8" Height="8"
+                                            Background="{DynamicResource AddedBrush}"
+                                            CornerRadius="4"/>
+									<TextBlock Text="SOURCE DATABASE (COPY FROM)"
+                                               FontSize="10" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource AddedBrush}"
+                                               FontFamily="{StaticResource PrimaryFont}"
+                                               VerticalAlignment="Center"/>
+								</StackPanel>
+
+								<ComboBox TabIndex="1" Style="{StaticResource ModernComboBoxStyle}"
+                                          ItemsSource="{Binding Connections}"
+                                          SelectedItem="{Binding SelectedSource}"
+                                          DisplayMemberPath="DisplayName"/>
+
+								<!-- Source info panel -->
+								<Border Background="{DynamicResource SurfaceBrush}"
+                                        CornerRadius="6"
+                                        Padding="12,10"
+                                        Visibility="{Binding SelectedSource,
+                                             Converter={StaticResource NullVis}}">
+									<StackPanel helpers:StackPanelHelper.Spacing="4">
+										<Grid>
+											<Grid.ColumnDefinitions>
+												<ColumnDefinition Width="90"/>
+												<ColumnDefinition/>
+											</Grid.ColumnDefinitions>
+											<Grid.RowDefinitions>
+												<RowDefinition/>
+												<RowDefinition/>
+												<RowDefinition/>
+												<RowDefinition/>
+											</Grid.RowDefinitions>
+
+											<TextBlock Grid.Row="0" Grid.Column="0" Text="Type"
+                                                       Style="{StaticResource TextCaption}"/>
+											<TextBlock Grid.Row="0" Grid.Column="1"
+                                                       Text="{Binding SelectedSource.DatabaseType, Converter={StaticResource EnumStr}}"
+                                                       FontFamily="{StaticResource PrimaryFont}"
+                                                       FontSize="11"/>
+
+											<TextBlock Grid.Row="1" Grid.Column="0" Text="Environment"
+                                                       Style="{StaticResource TextCaption}"/>
+											<TextBlock Grid.Row="1" Grid.Column="1"
+                                                       Text="{Binding SelectedSource.Environment, Converter={StaticResource EnumStr}}"
+                                                       FontFamily="{StaticResource PrimaryFont}"
+                                                       FontSize="11"/>
+
+											<TextBlock Grid.Row="2" Grid.Column="0" Text="Server"
+                                                       Style="{StaticResource TextCaption}"/>
+											<TextBlock Grid.Row="2" Grid.Column="1"
+                                                       Text="{Binding SelectedSource.Server}"
+                                                       FontFamily="{StaticResource MonoFont}"
+                                                       FontSize="11"/>
+
+											<TextBlock Grid.Row="3" Grid.Column="0" Text="Database"
+                                                       Style="{StaticResource TextCaption}"/>
+											<TextBlock Grid.Row="3" Grid.Column="1"
+                                                       Text="{Binding SelectedSource.DatabaseName}"
+                                                       FontFamily="{StaticResource MonoFont}"
+                                                       FontSize="11"/>
+										</Grid>
+									</StackPanel>
+								</Border>
+							</StackPanel>
+						</Border>
+
+						<!-- Arrow -->
+						<TextBlock Grid.Column="1"
+                                   Text="➔"
+                                   FontSize="24"
+                                   Foreground="{DynamicResource AccentBrush}"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"/>
+
+						<!-- Target -->
+						<Border Grid.Column="2"
+                                Background="{DynamicResource SurfaceElevatedBrush}"
+                                BorderBrush="{DynamicResource DeletedBrush}"
+                                BorderThickness="1"
+                                CornerRadius="8"
+                                Padding="16">
+							<StackPanel helpers:StackPanelHelper.Spacing="10">
+								<StackPanel Orientation="Horizontal" helpers:StackPanelHelper.Spacing="8">
+									<Border Width="8" Height="8"
+                                            Background="{DynamicResource DeletedBrush}"
+                                            CornerRadius="4"/>
+									<TextBlock Text="TARGET DATABASE (CREATE IN)"
+                                               FontSize="10" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource DeletedBrush}"
+                                               FontFamily="{StaticResource PrimaryFont}"
+                                               VerticalAlignment="Center"/>
+								</StackPanel>
+
+								<ComboBox TabIndex="2" Style="{StaticResource ModernComboBoxStyle}"
+                                          ItemsSource="{Binding Connections}"
+                                          SelectedItem="{Binding SelectedTarget}"
+                                          DisplayMemberPath="DisplayName"/>
+
+								<Border Background="{DynamicResource SurfaceBrush}"
+                                        CornerRadius="6"
+                                        Padding="12,10"
+                                        Visibility="{Binding SelectedTarget,
+                                             Converter={StaticResource NullVis}}">
+									<StackPanel helpers:StackPanelHelper.Spacing="4">
+										<Grid>
+											<Grid.ColumnDefinitions>
+												<ColumnDefinition Width="90"/>
+												<ColumnDefinition/>
+											</Grid.ColumnDefinitions>
+											<Grid.RowDefinitions>
+												<RowDefinition/>
+												<RowDefinition/>
+												<RowDefinition/>
+												<RowDefinition/>
+											</Grid.RowDefinitions>
+
+											<TextBlock Grid.Row="0" Grid.Column="0" Text="Type"
+                                                       Style="{StaticResource TextCaption}"/>
+											<TextBlock Grid.Row="0" Grid.Column="1"
+                                                       Text="{Binding SelectedTarget.DatabaseType, Converter={StaticResource EnumStr}}"
+                                                       FontFamily="{StaticResource PrimaryFont}"
+                                                       FontSize="11"/>
+
+											<TextBlock Grid.Row="1" Grid.Column="0" Text="Environment"
+                                                       Style="{StaticResource TextCaption}"/>
+											<TextBlock Grid.Row="1" Grid.Column="1"
+                                                       Text="{Binding SelectedTarget.Environment, Converter={StaticResource EnumStr}}"
+                                                       FontFamily="{StaticResource PrimaryFont}"
+                                                       FontSize="11"/>
+
+											<TextBlock Grid.Row="2" Grid.Column="0" Text="Server"
+                                                       Style="{StaticResource TextCaption}"/>
+											<TextBlock Grid.Row="2" Grid.Column="1"
+                                                       Text="{Binding SelectedTarget.Server}"
+                                                       FontFamily="{StaticResource MonoFont}"
+                                                       FontSize="11"/>
+
+											<TextBlock Grid.Row="3" Grid.Column="0" Text="Database"
+                                                       Style="{StaticResource TextCaption}"/>
+											<TextBlock Grid.Row="3" Grid.Column="1"
+                                                       Text="{Binding SelectedTarget.DatabaseName}"
+                                                       FontFamily="{StaticResource MonoFont}"
+                                                       FontSize="11"/>
+										</Grid>
+									</StackPanel>
+								</Border>
+							</StackPanel>
+						</Border>
+					</Grid>
+				</StackPanel>
+			</Border>
+
+			<!-- Tabbed Selection Section -->
+			<TabControl Background="Transparent" BorderThickness="0" Margin="0,10,0,0"
+			            Visibility="{Binding SelectedSource, Converter={StaticResource NullVis}}">
+				<TabControl.Resources>
+					<Style TargetType="TabItem">
+						<Setter Property="HeaderTemplate">
+							<Setter.Value>
+								<DataTemplate>
+									<ContentPresenter Content="{TemplateBinding Content}" Margin="10,6" RecognizesAccessKey="True"/>
+								</DataTemplate>
+							</Setter.Value>
+						</Setter>
+						<Setter Property="Template">
+							<Setter.Value>
+								<ControlTemplate TargetType="TabItem">
+									<Border x:Name="Border" BorderThickness="0,0,0,2" BorderBrush="Transparent" Padding="16,10" Background="Transparent" SnapsToDevicePixels="True">
+										<ContentPresenter x:Name="ContentSite" ContentSource="Header" RecognizesAccessKey="True" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+									</Border>
+									<ControlTemplate.Triggers>
+										<Trigger Property="IsSelected" Value="True">
+											<Setter TargetName="Border" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+											<Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+											<Setter Property="FontWeight" Value="SemiBold"/>
+										</Trigger>
+										<Trigger Property="IsSelected" Value="False">
+											<Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+										</Trigger>
+										<Trigger Property="IsMouseOver" Value="True">
+											<Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
+										</Trigger>
+									</ControlTemplate.Triggers>
+								</ControlTemplate>
+							</Setter.Value>
+						</Setter>
+					</Style>
+				</TabControl.Resources>
+
+				<!-- Tables Tab -->
+				<TabItem Header="Tables">
+					<StackPanel helpers:StackPanelHelper.Spacing="20" Margin="0,12,0,0">
+						<!-- Tables Selection Card -->
+						<Border Style="{StaticResource CardStyle}">
+							<StackPanel helpers:StackPanelHelper.Spacing="16">
+								<Grid>
+									<Grid.ColumnDefinitions>
+										<ColumnDefinition Width="*"/>
+										<ColumnDefinition Width="Auto"/>
+									</Grid.ColumnDefinitions>
+									<TextBlock Grid.Column="0" Text="Select Tables to Clone"
+											   Style="{StaticResource TextHeading3}"/>
+									<TextBlock Grid.Column="1" 
+											   Text="{Binding SelectedCountText}"
+											   Style="{StaticResource TextCaption}"
+											   VerticalAlignment="Center"/>
+								</Grid>
+
+								<!-- Filter / Search Row -->
+								<Grid>
+									<Grid.ColumnDefinitions>
+										<ColumnDefinition Width="*"/>
+										<ColumnDefinition Width="12"/>
+										<ColumnDefinition Width="Auto"/>
+										<ColumnDefinition Width="12"/>
+										<ColumnDefinition Width="Auto"/>
+									</Grid.ColumnDefinitions>
+
+									<Grid Grid.Column="0">
+										<TextBox TabIndex="3" Style="{StaticResource ModernTextBoxStyle}"
+												 Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+												 Padding="30,6,10,6"
+												 Height="32"/>
+										<TextBlock Text="🔍" FontSize="12"
+												   Margin="9,0,0,0"
+												   VerticalAlignment="Center"
+												   IsHitTestVisible="False"
+												   Foreground="{DynamicResource TextSecondaryBrush}"/>
+									</Grid>
+
+									<Button Grid.Column="2" TabIndex="4"
+											Content="✓ Toggle Select All"
+											Style="{StaticResource GhostButtonStyle}"
+											Height="32"
+											Command="{Binding ToggleSelectAllCommand}"/>
+
+									<controls:LoadingSpinner Grid.Column="4"
+															 SpinnerSize="20"
+															 Visibility="{Binding IsLoadingTables, Converter={StaticResource BoolVis}}"/>
+								</Grid>
+
+								<!-- Tables List -->
+								<Border BorderBrush="{DynamicResource BorderBrush}"
+										BorderThickness="1"
+										CornerRadius="6"
+										Background="{DynamicResource SurfaceBrush}"
+										Height="260"
+										Padding="4">
+									<ScrollViewer VerticalScrollBarVisibility="Auto">
+										<ItemsControl ItemsSource="{Binding FilteredAvailableTables}">
+											<ItemsControl.ItemTemplate>
+												<DataTemplate>
+													<CheckBox Style="{StaticResource ModernCheckBoxStyle}"
+															  IsChecked="{Binding IsSelected}"
+															  Content="{Binding Name}"
+															  Margin="8,6"
+															  VerticalAlignment="Center"/>
+												</DataTemplate>
+											</ItemsControl.ItemTemplate>
+										</ItemsControl>
+									</ScrollViewer>
+								</Border>
+							</StackPanel>
+						</Border>
+
+						<!-- Action Panel -->
+						<Border Style="{StaticResource CardStyle}">
+							<StackPanel helpers:StackPanelHelper.Spacing="14">
+								<Grid>
+									<Grid.ColumnDefinitions>
+										<ColumnDefinition/>
+										<ColumnDefinition Width="Auto"/>
+									</Grid.ColumnDefinitions>
+
+									<StackPanel Grid.Column="0" VerticalAlignment="Center">
+										<TextBlock Text="Execute Table Cloning"
+												   Style="{StaticResource TextHeading3}"/>
+										<TextBlock Text="{Binding StatusMessage}"
+												   Style="{StaticResource TextCaption}"
+												   Margin="0,4,0,0"/>
+									</StackPanel>
+
+									<StackPanel Grid.Column="1" Orientation="Horizontal" helpers:StackPanelHelper.Spacing="12" VerticalAlignment="Center">
+										<controls:LoadingSpinner SpinnerSize="28"
+																 Visibility="{Binding IsCloning, Converter={StaticResource BoolVis}}"/>
+										<Button TabIndex="5" Content="⚡ Clone Tables"
+												Style="{StaticResource SuccessButtonStyle}"
+												Height="40"
+												Padding="24,0"
+												FontSize="13"
+												IsEnabled="{Binding CanClone}"
+												Command="{Binding CloneSelectedTablesCommand}"/>
+									</StackPanel>
+								</Grid>
+
+								<!-- Progress Bar -->
+								<ProgressBar Style="{StaticResource ModernProgressBarStyle}"
+											 Value="{Binding ProgressValue}"
+											 Maximum="100"
+											 Visibility="{Binding IsCloning, Converter={StaticResource BoolVis}}"/>
+							</StackPanel>
+						</Border>
+					</StackPanel>
+				</TabItem>
+
+				<!-- Stored Procedures Tab -->
+				<TabItem Header="Stored Procedures">
+					<StackPanel helpers:StackPanelHelper.Spacing="20" Margin="0,12,0,0">
+						<!-- Procedures Selection Card -->
+						<Border Style="{StaticResource CardStyle}">
+							<StackPanel helpers:StackPanelHelper.Spacing="16">
+								<Grid>
+									<Grid.ColumnDefinitions>
+										<ColumnDefinition Width="*"/>
+										<ColumnDefinition Width="Auto"/>
+									</Grid.ColumnDefinitions>
+									<TextBlock Grid.Column="0" Text="Select Stored Procedures to Clone"
+											   Style="{StaticResource TextHeading3}"/>
+									<TextBlock Grid.Column="1" 
+											   Text="{Binding SelectedProceduresCountText}"
+											   Style="{StaticResource TextCaption}"
+											   VerticalAlignment="Center"/>
+								</Grid>
+
+								<!-- Filter / Search Row -->
+								<Grid>
+									<Grid.ColumnDefinitions>
+										<ColumnDefinition Width="*"/>
+										<ColumnDefinition Width="12"/>
+										<ColumnDefinition Width="Auto"/>
+										<ColumnDefinition Width="12"/>
+										<ColumnDefinition Width="Auto"/>
+									</Grid.ColumnDefinitions>
+
+									<Grid Grid.Column="0">
+										<TextBox TabIndex="6" Style="{StaticResource ModernTextBoxStyle}"
+												 Text="{Binding SearchTextProcedures, UpdateSourceTrigger=PropertyChanged}"
+												 Padding="30,6,10,6"
+												 Height="32"/>
+										<TextBlock Text="🔍" FontSize="12"
+												   Margin="9,0,0,0"
+												   VerticalAlignment="Center"
+												   IsHitTestVisible="False"
+												   Foreground="{DynamicResource TextSecondaryBrush}"/>
+									</Grid>
+
+									<Button Grid.Column="2" TabIndex="7"
+											Content="✓ Toggle Select All"
+											Style="{StaticResource GhostButtonStyle}"
+											Height="32"
+											Command="{Binding ToggleSelectAllProceduresCommand}"/>
+
+									<controls:LoadingSpinner Grid.Column="4"
+															 SpinnerSize="20"
+															 Visibility="{Binding IsLoadingProcedures, Converter={StaticResource BoolVis}}"/>
+								</Grid>
+
+								<!-- Procedures List -->
+								<Border BorderBrush="{DynamicResource BorderBrush}"
+										BorderThickness="1"
+										CornerRadius="6"
+										Background="{DynamicResource SurfaceBrush}"
+										Height="260"
+										Padding="4">
+									<ScrollViewer VerticalScrollBarVisibility="Auto">
+										<ItemsControl ItemsSource="{Binding FilteredAvailableProcedures}">
+											<ItemsControl.ItemTemplate>
+												<DataTemplate>
+													<CheckBox Style="{StaticResource ModernCheckBoxStyle}"
+															  IsChecked="{Binding IsSelected}"
+															  Content="{Binding Name}"
+															  Margin="8,6"
+															  VerticalAlignment="Center"/>
+												</DataTemplate>
+											</ItemsControl.ItemTemplate>
+										</ItemsControl>
+									</ScrollViewer>
+								</Border>
+							</StackPanel>
+						</Border>
+
+						<!-- Action Panel -->
+						<Border Style="{StaticResource CardStyle}">
+							<StackPanel helpers:StackPanelHelper.Spacing="14">
+								<Grid>
+									<Grid.ColumnDefinitions>
+										<ColumnDefinition/>
+										<ColumnDefinition Width="Auto"/>
+									</Grid.ColumnDefinitions>
+
+									<StackPanel Grid.Column="0" VerticalAlignment="Center">
+										<TextBlock Text="Execute Stored Procedure Cloning"
+												   Style="{StaticResource TextHeading3}"/>
+										<TextBlock Text="{Binding StatusMessage}"
+												   Style="{StaticResource TextCaption}"
+												   Margin="0,4,0,0"/>
+									</StackPanel>
+
+									<StackPanel Grid.Column="1" Orientation="Horizontal" helpers:StackPanelHelper.Spacing="12" VerticalAlignment="Center">
+										<controls:LoadingSpinner SpinnerSize="28"
+																 Visibility="{Binding IsCloning, Converter={StaticResource BoolVis}}"/>
+										<Button TabIndex="8" Content="⚡ Clone Procedures"
+												Style="{StaticResource SuccessButtonStyle}"
+												Height="40"
+												Padding="24,0"
+												FontSize="13"
+												IsEnabled="{Binding CanCloneProcedures}"
+												Command="{Binding CloneSelectedProceduresCommand}"/>
+									</StackPanel>
+								</Grid>
+
+								<!-- Progress Bar -->
+								<ProgressBar Style="{StaticResource ModernProgressBarStyle}"
+											 Value="{Binding ProgressValue}"
+											 Maximum="100"
+											 Visibility="{Binding IsCloning, Converter={StaticResource BoolVis}}"/>
+							</StackPanel>
+						</Border>
+					</StackPanel>
+				</TabItem>
+
+				<!-- User-Defined Table Types Tab -->
+				<TabItem Header="User-Defined Table Types">
+					<StackPanel helpers:StackPanelHelper.Spacing="20" Margin="0,12,0,0">
+						<!-- Table Types Selection Card -->
+						<Border Style="{StaticResource CardStyle}">
+							<StackPanel helpers:StackPanelHelper.Spacing="16">
+								<Grid>
+									<Grid.ColumnDefinitions>
+										<ColumnDefinition Width="*"/>
+										<ColumnDefinition Width="Auto"/>
+									</Grid.ColumnDefinitions>
+									<TextBlock Grid.Column="0" Text="Select User-Defined Table Types to Clone"
+											   Style="{StaticResource TextHeading3}"/>
+									<TextBlock Grid.Column="1" 
+											   Text="{Binding SelectedTableTypesCountText}"
+											   Style="{StaticResource TextCaption}"
+											   VerticalAlignment="Center"/>
+								</Grid>
+
+								<!-- Filter / Search Row -->
+								<Grid>
+									<Grid.ColumnDefinitions>
+										<ColumnDefinition Width="*"/>
+										<ColumnDefinition Width="12"/>
+										<ColumnDefinition Width="Auto"/>
+										<ColumnDefinition Width="12"/>
+										<ColumnDefinition Width="Auto"/>
+									</Grid.ColumnDefinitions>
+
+									<Grid Grid.Column="0">
+										<TextBox TabIndex="9" Style="{StaticResource ModernTextBoxStyle}"
+												 Text="{Binding SearchTextTableTypes, UpdateSourceTrigger=PropertyChanged}"
+												 Padding="30,6,10,6"
+												 Height="32"/>
+										<TextBlock Text="🔍" FontSize="12"
+												   Margin="9,0,0,0"
+												   VerticalAlignment="Center"
+												   IsHitTestVisible="False"
+												   Foreground="{DynamicResource TextSecondaryBrush}"/>
+									</Grid>
+
+									<Button Grid.Column="2" TabIndex="10"
+											Content="✓ Toggle Select All"
+											Style="{StaticResource GhostButtonStyle}"
+											Height="32"
+											Command="{Binding ToggleSelectAllTableTypesCommand}"/>
+
+									<controls:LoadingSpinner Grid.Column="4"
+															 SpinnerSize="20"
+															 Visibility="{Binding IsLoadingTableTypes, Converter={StaticResource BoolVis}}"/>
+								</Grid>
+
+								<!-- Table Types List -->
+								<Border BorderBrush="{DynamicResource BorderBrush}"
+										BorderThickness="1"
+										CornerRadius="6"
+										Background="{DynamicResource SurfaceBrush}"
+										Height="260"
+										Padding="4">
+									<ScrollViewer VerticalScrollBarVisibility="Auto">
+										<ItemsControl ItemsSource="{Binding FilteredAvailableTableTypes}">
+											<ItemsControl.ItemTemplate>
+												<DataTemplate>
+													<CheckBox Style="{StaticResource ModernCheckBoxStyle}"
+															  IsChecked="{Binding IsSelected}"
+															  Content="{Binding Name}"
+															  Margin="8,6"
+															  VerticalAlignment="Center"/>
+												</DataTemplate>
+											</ItemsControl.ItemTemplate>
+										</ItemsControl>
+									</ScrollViewer>
+								</Border>
+							</StackPanel>
+						</Border>
+
+						<!-- Action Panel -->
+						<Border Style="{StaticResource CardStyle}">
+							<StackPanel helpers:StackPanelHelper.Spacing="14">
+								<Grid>
+									<Grid.ColumnDefinitions>
+										<ColumnDefinition/>
+										<ColumnDefinition Width="Auto"/>
+									</Grid.ColumnDefinitions>
+
+									<StackPanel Grid.Column="0" VerticalAlignment="Center">
+										<TextBlock Text="Execute User-Defined Table Type Cloning"
+												   Style="{StaticResource TextHeading3}"/>
+										<TextBlock Text="{Binding StatusMessage}"
+												   Style="{StaticResource TextCaption}"
+												   Margin="0,4,0,0"/>
+									</StackPanel>
+
+									<StackPanel Grid.Column="1" Orientation="Horizontal" helpers:StackPanelHelper.Spacing="12" VerticalAlignment="Center">
+										<controls:LoadingSpinner SpinnerSize="28"
+																 Visibility="{Binding IsCloning, Converter={StaticResource BoolVis}}"/>
+										<Button TabIndex="11" Content="⚡ Clone Table Types"
+												Style="{StaticResource SuccessButtonStyle}"
+												Height="40"
+												Padding="24,0"
+												FontSize="13"
+												IsEnabled="{Binding CanCloneTableTypes}"
+												Command="{Binding CloneSelectedTableTypesCommand}"/>
+									</StackPanel>
+								</Grid>
+
+								<!-- Progress Bar -->
+								<ProgressBar Style="{StaticResource ModernProgressBarStyle}"
+											 Value="{Binding ProgressValue}"
+											 Maximum="100"
+											 Visibility="{Binding IsCloning, Converter={StaticResource BoolVis}}"/>
+							</StackPanel>
+						</Border>
+					</StackPanel>
+				</TabItem>
+
+				<!-- Triggers Tab -->
+				<TabItem Header="Triggers">
+					<StackPanel helpers:StackPanelHelper.Spacing="20" Margin="0,12,0,0">
+						<!-- Triggers Selection Card -->
+						<Border Style="{StaticResource CardStyle}">
+							<StackPanel helpers:StackPanelHelper.Spacing="16">
+								<Grid>
+									<Grid.ColumnDefinitions>
+										<ColumnDefinition Width="*"/>
+										<ColumnDefinition Width="Auto"/>
+									</Grid.ColumnDefinitions>
+									<TextBlock Grid.Column="0" Text="Select Triggers to Clone"
+											   Style="{StaticResource TextHeading3}"/>
+									<TextBlock Grid.Column="1" 
+											   Text="{Binding SelectedTriggersCountText}"
+											   Style="{StaticResource TextCaption}"
+											   VerticalAlignment="Center"/>
+								</Grid>
+
+								<!-- Filter / Search Row -->
+								<Grid>
+									<Grid.ColumnDefinitions>
+										<ColumnDefinition Width="*"/>
+										<ColumnDefinition Width="12"/>
+										<ColumnDefinition Width="Auto"/>
+										<ColumnDefinition Width="12"/>
+										<ColumnDefinition Width="Auto"/>
+									</Grid.ColumnDefinitions>
+
+									<Grid Grid.Column="0">
+										<TextBox TabIndex="12" Style="{StaticResource ModernTextBoxStyle}"
+												 Text="{Binding SearchTextTriggers, UpdateSourceTrigger=PropertyChanged}"
+												 Padding="30,6,10,6"
+												 Height="32"/>
+										<TextBlock Text="🔍" FontSize="12"
+												   Margin="9,0,0,0"
+												   VerticalAlignment="Center"
+												   IsHitTestVisible="False"
+												   Foreground="{DynamicResource TextSecondaryBrush}"/>
+									</Grid>
+
+									<Button Grid.Column="2" TabIndex="13"
+											Content="✓ Toggle Select All"
+											Style="{StaticResource GhostButtonStyle}"
+											Height="32"
+											Command="{Binding ToggleSelectAllTriggersCommand}"/>
+
+									<controls:LoadingSpinner Grid.Column="4"
+															 SpinnerSize="20"
+															 Visibility="{Binding IsLoadingTriggers, Converter={StaticResource BoolVis}}"/>
+								</Grid>
+
+								<!-- Triggers List -->
+								<Border BorderBrush="{DynamicResource BorderBrush}"
+										BorderThickness="1"
+										CornerRadius="6"
+										Background="{DynamicResource SurfaceBrush}"
+										Height="260"
+										Padding="4">
+									<ScrollViewer VerticalScrollBarVisibility="Auto">
+										<ItemsControl ItemsSource="{Binding FilteredAvailableTriggers}">
+											<ItemsControl.ItemTemplate>
+												<DataTemplate>
+													<CheckBox Style="{StaticResource ModernCheckBoxStyle}"
+															  IsChecked="{Binding IsSelected}"
+															  Content="{Binding Name}"
+															  Margin="8,6"
+															  VerticalAlignment="Center"/>
+												</DataTemplate>
+											</ItemsControl.ItemTemplate>
+										</ItemsControl>
+									</ScrollViewer>
+								</Border>
+							</StackPanel>
+						</Border>
+
+						<!-- Action Panel -->
+						<Border Style="{StaticResource CardStyle}">
+							<StackPanel helpers:StackPanelHelper.Spacing="14">
+								<Grid>
+									<Grid.ColumnDefinitions>
+										<ColumnDefinition/>
+										<ColumnDefinition Width="Auto"/>
+									</Grid.ColumnDefinitions>
+
+									<StackPanel Grid.Column="0" VerticalAlignment="Center">
+										<TextBlock Text="Execute Trigger Cloning"
+												   Style="{StaticResource TextHeading3}"/>
+										<TextBlock Text="{Binding StatusMessage}"
+												   Style="{StaticResource TextCaption}"
+												   Margin="0,4,0,0"/>
+									</StackPanel>
+
+									<StackPanel Grid.Column="1" Orientation="Horizontal" helpers:StackPanelHelper.Spacing="12" VerticalAlignment="Center">
+										<controls:LoadingSpinner SpinnerSize="28"
+																 Visibility="{Binding IsCloning, Converter={StaticResource BoolVis}}"/>
+										<Button TabIndex="14" Content="⚡ Clone Triggers"
+												Style="{StaticResource SuccessButtonStyle}"
+												Height="40"
+												Padding="24,0"
+												FontSize="13"
+												IsEnabled="{Binding CanCloneTriggers}"
+												Command="{Binding CloneSelectedTriggersCommand}"/>
+									</StackPanel>
+								</Grid>
+
+								<!-- Progress Bar -->
+								<ProgressBar Style="{StaticResource ModernProgressBarStyle}"
+											 Value="{Binding ProgressValue}"
+											 Maximum="100"
+											 Visibility="{Binding IsCloning, Converter={StaticResource BoolVis}}"/>
+							</StackPanel>
+						</Border>
+					</StackPanel>
+				</TabItem>
+			</TabControl>
+
+		</StackPanel>
+	</ScrollViewer>
+</UserControl>

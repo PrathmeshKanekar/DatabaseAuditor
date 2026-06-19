@@ -1,12 +1,407 @@
-﻿<Window x:Class="DatabaseAuditor.WPF.MainWindow"
+<Window x:Class="DatabaseAuditor.WPF.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:DatabaseAuditor.WPF"
+        xmlns:vm="clr-namespace:DatabaseAuditor.WPF.ViewModels"
+        xmlns:controls="clr-namespace:DatabaseAuditor.WPF.Controls"
+        xmlns:helpers="clr-namespace:DatabaseAuditor.WPF.Helpers"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
-    <Grid>
+        Title="Database Auditor — Three Star Infotech"
+        MinWidth="1100" MinHeight="700"
+        Background="{DynamicResource BackgroundBrush}"
+        WindowStartupLocation="Manual"
+        Closing="OnWindowClosing">
 
+    <Window.DataContext>
+        <Binding/>
+    </Window.DataContext>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <Grid Grid.Row="0">
+            <Grid.ColumnDefinitions>
+                <!-- Sidebar -->
+                <ColumnDefinition Width="220"/>
+                <!-- Main content -->
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- ═══════════════════════════════════════════════
+                 SIDEBAR
+                 ═══════════════════════════════════════════════ -->
+            <Border Grid.Column="0"
+                    Background="{DynamicResource NavBackgroundBrush}"
+                    BorderBrush="{DynamicResource BorderBrush}"
+                    BorderThickness="0,0,1,0">
+                <DockPanel>
+
+                    <!-- Logo / App Header -->
+                    <Border DockPanel.Dock="Top"
+                            Padding="16,20,16,20"
+                            BorderBrush="{DynamicResource BorderBrush}"
+                            BorderThickness="0,0,0,1">
+                        <StackPanel>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="36"/>
+                                    <ColumnDefinition Width="8"/>
+                                    <ColumnDefinition/>
+                                </Grid.ColumnDefinitions>
+
+                                <!-- DB Icon -->
+                                <Border Grid.Column="0"
+                                        Width="36" Height="36"
+                                        Background="{DynamicResource AccentBrush}"
+                                        CornerRadius="8">
+                                    <TextBlock Text="DB"
+                                               FontSize="13"
+                                               FontWeight="Bold"
+                                               Foreground="White"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"/>
+                                </Border>
+
+                                <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                                    <TextBlock Text="Database Auditor"
+                                               FontSize="12"
+                                               FontWeight="SemiBold"
+                                               Foreground="{DynamicResource TextPrimaryBrush}"
+                                               FontFamily="{StaticResource PrimaryFont}"/>
+                                    <TextBlock Text="v2.0 Enterprise"
+                                               FontSize="10"
+                                               Foreground="{DynamicResource AccentBrush}"
+                                               FontFamily="{StaticResource PrimaryFont}"/>
+                                </StackPanel>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Theme + Settings at bottom -->
+                    <Border DockPanel.Dock="Bottom"
+                            Padding="12,12"
+                            BorderBrush="{DynamicResource BorderBrush}"
+                            BorderThickness="0,1,0,0">
+                        <StackPanel helpers:StackPanelHelper.Spacing="6">
+
+                            <!-- Theme Toggle Row -->
+                            <Border Background="{DynamicResource SurfaceElevatedBrush}"
+                                    CornerRadius="8"
+                                    Padding="10,8"
+                                    Margin="0,0,0,4">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" helpers:StackPanelHelper.Spacing="6">
+                                        <TextBlock x:Name="ThemeIcon" Text="☀" FontSize="13" VerticalAlignment="Center"
+                                                   Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                        <TextBlock x:Name="ThemeLabel" Text="Light Mode"
+                                                   FontSize="11"
+                                                   FontFamily="{StaticResource PrimaryFont}"
+                                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                                                   VerticalAlignment="Center"/>
+                                    </StackPanel>
+
+                                    <!-- Toggle Switch -->
+                                    <Border Grid.Column="1"
+                                            x:Name="ThemeToggleBorder"
+                                            Width="44" Height="22"
+                                            CornerRadius="11"
+                                            Background="{DynamicResource InputBorderBrush}"
+                                            Cursor="Hand"
+                                            MouseLeftButtonUp="OnThemeToggleClick">
+                                        <Grid>
+                                            <Ellipse x:Name="ThemeToggleKnob"
+                                                     Width="18" Height="18"
+                                                     Fill="White"
+                                                     HorizontalAlignment="Left"
+                                                     Margin="2,0,0,0"
+                                                     VerticalAlignment="Center">
+                                                <Ellipse.RenderTransform>
+                                                    <TranslateTransform x:Name="KnobTranslate" X="0"/>
+                                                </Ellipse.RenderTransform>
+                                            </Ellipse>
+                                        </Grid>
+                                    </Border>
+                                </Grid>
+                            </Border>
+
+                            <!-- Settings Nav Item -->
+                            <Button x:Name="BtnSettings"
+                                    Style="{StaticResource NavButtonStyle}"
+                                    Click="OnNavSettings"
+                                    Height="36">
+                                <StackPanel Orientation="Horizontal" helpers:StackPanelHelper.Spacing="10">
+                                    <TextBlock Text="⚙" FontSize="14" VerticalAlignment="Center"
+                                               Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                    <TextBlock Text="Settings"
+                                               FontFamily="{StaticResource PrimaryFont}"
+                                               FontSize="12"
+                                               VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+
+                            <!-- About -->
+                            <Button x:Name="BtnAbout"
+                                    Style="{StaticResource NavButtonStyle}"
+                                    Click="OnNavAbout"
+                                    Height="36">
+                                <StackPanel Orientation="Horizontal" helpers:StackPanelHelper.Spacing="10">
+                                    <TextBlock Text="ℹ" FontSize="14" VerticalAlignment="Center"
+                                               Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                    <TextBlock Text="About"
+                                               FontFamily="{StaticResource PrimaryFont}"
+                                               FontSize="12"
+                                               VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Navigation Items -->
+                    <ScrollViewer DockPanel.Dock="Top"
+                                  VerticalScrollBarVisibility="Auto"
+                                  HorizontalScrollBarVisibility="Hidden">
+                        <StackPanel Margin="0,8,0,0">
+
+                            <!-- Section Label -->
+                            <TextBlock Text="MAIN"
+                                       FontSize="9"
+                                       FontWeight="SemiBold"
+                                       Foreground="{DynamicResource TextDisabledBrush}"
+                                       FontFamily="{StaticResource PrimaryFont}"
+                                       Margin="16,8,0,4"/>
+
+                            <!-- Dashboard -->
+                            <Button x:Name="BtnDashboard"
+                                    Style="{StaticResource NavButtonActiveStyle}"
+                                    Click="OnNavDashboard"
+                                    Height="42">
+                                <StackPanel Orientation="Horizontal" helpers:StackPanelHelper.Spacing="12">
+                                    <TextBlock Text="▦" FontSize="15" VerticalAlignment="Center"/>
+                                    <TextBlock Text="Dashboard"
+                                               FontFamily="{StaticResource PrimaryFont}"
+                                               FontSize="13"
+                                               VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+
+                            <!-- Connections -->
+                            <Button x:Name="BtnConnections"
+                                    Style="{StaticResource NavButtonStyle}"
+                                    Click="OnNavConnections"
+                                    Height="42">
+                                <StackPanel Orientation="Horizontal" helpers:StackPanelHelper.Spacing="12">
+                                    <TextBlock Text="⊞" FontSize="15" VerticalAlignment="Center"/>
+                                    <TextBlock Text="Connections"
+                                               FontFamily="{StaticResource PrimaryFont}"
+                                               FontSize="13"
+                                               VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+
+                            <!-- Divider -->
+                            <TextBlock Text="COMPARE"
+                                       FontSize="9"
+                                       FontWeight="SemiBold"
+                                       Foreground="{DynamicResource TextDisabledBrush}"
+                                       FontFamily="{StaticResource PrimaryFont}"
+                                       Margin="16,12,0,4"/>
+
+                            <!-- Compare -->
+                            <Button x:Name="BtnCompare"
+                                    Style="{StaticResource NavButtonStyle}"
+                                    Click="OnNavCompare"
+                                    Height="42">
+                                <StackPanel Orientation="Horizontal" helpers:StackPanelHelper.Spacing="12">
+                                    <TextBlock Text="⇌" FontSize="16" VerticalAlignment="Center"/>
+                                    <TextBlock Text="Compare"
+                                               FontFamily="{StaticResource PrimaryFont}"
+                                               FontSize="13"
+                                               VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+
+                            <!-- Results -->
+                            <Button x:Name="BtnResults"
+                                    Style="{StaticResource NavButtonStyle}"
+                                    Click="OnNavResults"
+                                    Height="42">
+                                <StackPanel Orientation="Horizontal" helpers:StackPanelHelper.Spacing="12">
+                                    <TextBlock Text="≡" FontSize="16" VerticalAlignment="Center"/>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="Results"
+                                                   FontFamily="{StaticResource PrimaryFont}"
+                                                   FontSize="13"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Button>
+
+                            <!-- Clone Tables -->
+                            <Button x:Name="BtnClone"
+                                    Style="{StaticResource NavButtonStyle}"
+                                    Click="OnNavClone"
+                                    Height="42">
+                                <StackPanel Orientation="Horizontal" helpers:StackPanelHelper.Spacing="12">
+                                    <TextBlock Text="⚡" FontSize="14" VerticalAlignment="Center"/>
+                                    <TextBlock Text="Clone Tables"
+                                               FontFamily="{StaticResource PrimaryFont}"
+                                               FontSize="13"
+                                               VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+
+                            <!-- Section Label -->
+                            <TextBlock Text="REPORTS"
+                                       FontSize="9"
+                                       FontWeight="SemiBold"
+                                       Foreground="{DynamicResource TextDisabledBrush}"
+                                       FontFamily="{StaticResource PrimaryFont}"
+                                       Margin="16,12,0,4"/>
+
+                            <!-- Reports -->
+                            <Button x:Name="BtnReports"
+                                    Style="{StaticResource NavButtonStyle}"
+                                    Click="OnNavReports"
+                                    Height="42">
+                                <StackPanel Orientation="Horizontal" helpers:StackPanelHelper.Spacing="12">
+                                    <TextBlock Text="📄" FontSize="14" VerticalAlignment="Center"/>
+                                    <TextBlock Text="Reports"
+                                               FontFamily="{StaticResource PrimaryFont}"
+                                               FontSize="13"
+                                               VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+
+                        </StackPanel>
+                    </ScrollViewer>
+                </DockPanel>
+            </Border>
+
+            <!-- ═══════════════════════════════════════════════
+                 MAIN CONTENT AREA
+                 ═══════════════════════════════════════════════ -->
+            <Grid Grid.Column="1">
+                <Grid.RowDefinitions>
+                    <!-- Top header bar -->
+                    <RowDefinition Height="52"/>
+                    <!-- Page content -->
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- Top Bar -->
+                <Border Grid.Row="0"
+                        Background="{DynamicResource SurfaceBrush}"
+                        BorderBrush="{DynamicResource BorderBrush}"
+                        BorderThickness="0,0,0,1">
+                    <Grid Margin="20,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Page title -->
+                        <StackPanel Grid.Column="0" Orientation="Horizontal"
+                                    VerticalAlignment="Center" helpers:StackPanelHelper.Spacing="8">
+                            <TextBlock x:Name="PageTitleText"
+                                       Text="Dashboard"
+                                       FontSize="16"
+                                       FontWeight="SemiBold"
+                                       FontFamily="{StaticResource PrimaryFont}"
+                                       Foreground="{DynamicResource TextPrimaryBrush}"
+                                       VerticalAlignment="Center"/>
+                            <Border x:Name="PageBadge"
+                                    Background="{DynamicResource AccentBrush}"
+                                    CornerRadius="10"
+                                    Padding="8,2"
+                                    Visibility="Collapsed">
+                                <TextBlock x:Name="PageBadgeText"
+                                           FontSize="10"
+                                           FontWeight="SemiBold"
+                                           Foreground="White"
+                                           FontFamily="{StaticResource PrimaryFont}"/>
+                            </Border>
+                        </StackPanel>
+
+                        <!-- Right actions -->
+                        <StackPanel Grid.Column="1" Orientation="Horizontal"
+                                    VerticalAlignment="Center" helpers:StackPanelHelper.Spacing="8">
+                            <controls:LoadingSpinner x:Name="TopBarSpinner"
+                                                     SpinnerSize="20"
+                                                     Visibility="Collapsed"/>
+                            <Border Background="{DynamicResource SurfaceElevatedBrush}"
+                                    CornerRadius="6"
+                                    Padding="10,5">
+                                <TextBlock x:Name="ClockText"
+                                           FontSize="11"
+                                           FontFamily="{StaticResource MonoFont}"
+                                           Foreground="{DynamicResource TextSecondaryBrush}"
+                                           VerticalAlignment="Center"/>
+                            </Border>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <!-- Page Host -->
+                <ContentControl Grid.Row="1"
+                                x:Name="PageHost"
+                                Background="{DynamicResource BackgroundBrush}"/>
+            </Grid>
+        </Grid>
+
+        <!-- ═══════════════════════════════════════════════
+             STATUS BAR
+             ═══════════════════════════════════════════════ -->
+        <Border Grid.Row="1"
+                Style="{StaticResource StatusBarStyle}">
+            <Grid Margin="12,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="12"/>
+                    <ColumnDefinition/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Status indicator dot -->
+                <Ellipse Grid.Column="0"
+                         Width="8" Height="8"
+                         x:Name="StatusDot"
+                         Fill="{DynamicResource SuccessBrush}"
+                         VerticalAlignment="Center"/>
+
+                <!-- Status message -->
+                <TextBlock Grid.Column="2"
+                           x:Name="StatusText"
+                           Text="Ready"
+                           FontSize="11"
+                           FontFamily="{StaticResource PrimaryFont}"
+                           Foreground="{DynamicResource TextSecondaryBrush}"
+                           VerticalAlignment="Center"/>
+
+                <!-- Right info -->
+                <StackPanel Grid.Column="3" Orientation="Horizontal"
+                            helpers:StackPanelHelper.Spacing="16" VerticalAlignment="Center">
+                    <TextBlock Text="Three Star Infotech"
+                               FontSize="10"
+                               FontFamily="{StaticResource PrimaryFont}"
+                               Foreground="{DynamicResource TextDisabledBrush}"/>
+                    <TextBlock x:Name="VersionText"
+                               FontSize="10"
+                               FontFamily="{StaticResource PrimaryFont}"
+                               Foreground="{DynamicResource TextDisabledBrush}"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Snackbar overlay -->
+        <controls:SnackbarControl x:Name="Snackbar"
+                                  Grid.Row="0"
+                                  Panel.ZIndex="999"/>
     </Grid>
 </Window>

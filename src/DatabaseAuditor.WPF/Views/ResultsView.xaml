@@ -1,0 +1,613 @@
+<UserControl x:Class="DatabaseAuditor.WPF.Views.ResultsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:converters="clr-namespace:DatabaseAuditor.WPF.Converters"
+             xmlns:controls="clr-namespace:DatabaseAuditor.WPF.Controls"
+             xmlns:vm="clr-namespace:DatabaseAuditor.WPF.ViewModels"
+             xmlns:helpers="clr-namespace:DatabaseAuditor.WPF.Helpers"
+             Background="{DynamicResource BackgroundBrush}">
+
+	<UserControl.Resources>
+		<converters:ChangeTypeToColorConverter x:Key="ChangeToColor"/>
+		<converters:ChangeTypeToBgColorConverter x:Key="ChangeToBg"/>
+		<converters:ChangeTypeToTextConverter x:Key="ChangeToText"/>
+		<converters:EnumToStringConverter x:Key="EnumStr"/>
+		<converters:BoolToVisibilityConverter x:Key="BoolVis"/>
+		<converters:InverseBoolToVisibilityConverter x:Key="InvBoolVis"/>
+		<converters:NullToVisibilityConverter x:Key="NullVis"/>
+	</UserControl.Resources>
+
+	<Grid>
+		<Grid.RowDefinitions>
+			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="*"/>
+		</Grid.RowDefinitions>
+
+		<!-- No session message -->
+		<Border Grid.Row="0" Grid.RowSpan="2"
+                Visibility="{Binding HasResults, Converter={StaticResource InvBoolVis}}">
+			<StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" helpers:StackPanelHelper.Spacing="16">
+				<TextBlock Text="⇌" FontSize="48"
+                           Foreground="{DynamicResource TextDisabledBrush}"
+                           HorizontalAlignment="Center"/>
+				<TextBlock Text="No comparison results available"
+                           Style="{StaticResource TextHeading2}"
+                           HorizontalAlignment="Center"/>
+				<TextBlock Text="Run a database comparison to see results here."
+                           Style="{StaticResource TextCaption}"
+                           HorizontalAlignment="Center"/>
+			</StackPanel>
+		</Border>
+
+		<!-- Results content -->
+		<Grid Grid.Row="0" Grid.RowSpan="2"
+              Visibility="{Binding HasResults, Converter={StaticResource BoolVis}}">
+			<Grid.RowDefinitions>
+				<RowDefinition Height="Auto"/>
+				<RowDefinition Height="*"/>
+			</Grid.RowDefinitions>
+
+			<!-- Summary Bar -->
+			<Border Grid.Row="0"
+                    Margin="16,16,16,0">
+				<StackPanel helpers:StackPanelHelper.Spacing="12">
+
+					<!-- Session info -->
+					<Border Background="{DynamicResource SurfaceBrush}"
+                            BorderBrush="{DynamicResource BorderBrush}"
+                            BorderThickness="1"
+                            CornerRadius="8"
+                            Padding="16,12">
+						<Grid>
+							<Grid.ColumnDefinitions>
+								<ColumnDefinition/>
+								<ColumnDefinition Width="Auto"/>
+							</Grid.ColumnDefinitions>
+							<StackPanel Grid.Column="0" Orientation="Horizontal" helpers:StackPanelHelper.Spacing="16">
+								<StackPanel helpers:StackPanelHelper.Spacing="2">
+									<TextBlock Text="SOURCE"
+                                               FontSize="9" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource AddedBrush}"
+                                               FontFamily="{StaticResource PrimaryFont}"/>
+									<TextBlock Text="{Binding SourceLabel}"
+                                               FontSize="12" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource TextPrimaryBrush}"
+                                               FontFamily="{StaticResource PrimaryFont}"/>
+								</StackPanel>
+								<TextBlock Text="⇌" FontSize="18"
+                                           Foreground="{DynamicResource TextSecondaryBrush}"
+                                           VerticalAlignment="Center"/>
+								<StackPanel helpers:StackPanelHelper.Spacing="2">
+									<TextBlock Text="TARGET"
+                                               FontSize="9" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource DeletedBrush}"
+                                               FontFamily="{StaticResource PrimaryFont}"/>
+									<TextBlock Text="{Binding TargetLabel}"
+                                               FontSize="12" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource TextPrimaryBrush}"
+                                               FontFamily="{StaticResource PrimaryFont}"/>
+								</StackPanel>
+							</StackPanel>
+							<StackPanel Grid.Column="1" Orientation="Horizontal" helpers:StackPanelHelper.Spacing="16" VerticalAlignment="Center">
+								<StackPanel HorizontalAlignment="Right">
+									<TextBlock Text="{Binding CompareTypeLabel}"
+                                               FontSize="11"
+                                               Foreground="{DynamicResource AccentBrush}"
+                                               FontFamily="{StaticResource PrimaryFont}"
+                                               HorizontalAlignment="Right"/>
+									<TextBlock Text="{Binding ExecutionTime}"
+                                               FontSize="11"
+                                               Foreground="{DynamicResource TextSecondaryBrush}"
+                                               FontFamily="{StaticResource MonoFont}"
+                                               HorizontalAlignment="Right"/>
+								</StackPanel>
+							</StackPanel>
+						</Grid>
+					</Border>
+
+					<!-- Summary cards row -->
+					<Grid>
+						<Grid.ColumnDefinitions>
+							<ColumnDefinition/>
+							<ColumnDefinition Width="8"/>
+							<ColumnDefinition/>
+							<ColumnDefinition Width="8"/>
+							<ColumnDefinition/>
+							<ColumnDefinition Width="8"/>
+							<ColumnDefinition/>
+							<ColumnDefinition Width="8"/>
+							<ColumnDefinition/>
+						</Grid.ColumnDefinitions>
+
+						<!-- Total -->
+						<Border Grid.Column="0"
+                                Background="{DynamicResource SurfaceBrush}"
+                                BorderBrush="{DynamicResource BorderBrush}"
+                                BorderThickness="1" CornerRadius="8"
+                                Padding="14,10"
+                                Cursor="Hand"
+                                MouseLeftButtonUp="OnFilterTotal">
+							<StackPanel>
+								<TextBlock Text="TOTAL"
+                                           FontSize="9" FontWeight="SemiBold"
+                                           Foreground="{DynamicResource TextSecondaryBrush}"
+                                           FontFamily="{StaticResource PrimaryFont}"/>
+								<TextBlock Text="{Binding TotalObjects}"
+                                           FontSize="24" FontWeight="Bold"
+                                           Foreground="{DynamicResource TextPrimaryBrush}"
+                                           FontFamily="{StaticResource PrimaryFont}"/>
+								<TextBlock Text="Objects"
+                                           FontSize="10"
+                                           Foreground="{DynamicResource TextSecondaryBrush}"
+                                           FontFamily="{StaticResource PrimaryFont}"/>
+							</StackPanel>
+						</Border>
+
+						<!-- Added -->
+						<Border Grid.Column="2"
+                                Background="{DynamicResource AddedBgBrush}"
+                                BorderBrush="{DynamicResource AddedBrush}"
+                                BorderThickness="1" CornerRadius="8"
+                                Padding="14,10"
+                                Cursor="Hand"
+                                MouseLeftButtonUp="OnFilterAdded">
+							<StackPanel>
+								<TextBlock Text="ADDED"
+                                           FontSize="9" FontWeight="SemiBold"
+                                           Foreground="{DynamicResource AddedBrush}"
+                                           FontFamily="{StaticResource PrimaryFont}"/>
+								<TextBlock Text="{Binding AddedCount}"
+                                           FontSize="24" FontWeight="Bold"
+                                           Foreground="{DynamicResource AddedBrush}"
+                                           FontFamily="{StaticResource PrimaryFont}"/>
+								<TextBlock Text="New in source"
+                                           FontSize="10"
+                                           Foreground="{DynamicResource AddedBrush}"
+                                           FontFamily="{StaticResource PrimaryFont}"/>
+							</StackPanel>
+						</Border>
+
+						<!-- Deleted -->
+						<Border Grid.Column="4"
+                                Background="{DynamicResource DeletedBgBrush}"
+                                BorderBrush="{DynamicResource DeletedBrush}"
+                                BorderThickness="1" CornerRadius="8"
+                                Padding="14,10"
+                                Cursor="Hand"
+                                MouseLeftButtonUp="OnFilterDeleted">
+							<StackPanel>
+								<TextBlock Text="MISSING"
+                                           FontSize="9" FontWeight="SemiBold"
+                                           Foreground="{DynamicResource DeletedBrush}"
+                                           FontFamily="{StaticResource PrimaryFont}"/>
+								<TextBlock Text="{Binding DeletedCount}"
+                                           FontSize="24" FontWeight="Bold"
+                                           Foreground="{DynamicResource DeletedBrush}"
+                                           FontFamily="{StaticResource PrimaryFont}"/>
+								<TextBlock Text="Missing in target"
+                                           FontSize="10"
+                                           Foreground="{DynamicResource DeletedBrush}"
+                                           FontFamily="{StaticResource PrimaryFont}"/>
+							</StackPanel>
+						</Border>
+
+						<!-- Modified -->
+						<Border Grid.Column="6"
+                                Background="{DynamicResource ModifiedBgBrush}"
+                                BorderBrush="{DynamicResource ModifiedBrush}"
+                                BorderThickness="1" CornerRadius="8"
+                                Padding="14,10"
+                                Cursor="Hand"
+                                MouseLeftButtonUp="OnFilterModified">
+							<StackPanel>
+								<TextBlock Text="MODIFIED"
+                                           FontSize="9" FontWeight="SemiBold"
+                                           Foreground="{DynamicResource ModifiedBrush}"
+                                           FontFamily="{StaticResource PrimaryFont}"/>
+								<TextBlock Text="{Binding ModifiedCount}"
+                                           FontSize="24" FontWeight="Bold"
+                                           Foreground="{DynamicResource ModifiedBrush}"
+                                           FontFamily="{StaticResource PrimaryFont}"/>
+								<TextBlock Text="Schema changes"
+                                           FontSize="10"
+                                           Foreground="{DynamicResource ModifiedBrush}"
+                                           FontFamily="{StaticResource PrimaryFont}"/>
+							</StackPanel>
+						</Border>
+
+						<!-- Unchanged -->
+						<Border Grid.Column="8"
+                                Background="{DynamicResource SurfaceBrush}"
+                                BorderBrush="{DynamicResource BorderBrush}"
+                                BorderThickness="1" CornerRadius="8"
+                                Padding="14,10"
+                                Cursor="Hand"
+                                MouseLeftButtonUp="OnFilterUnchanged">
+							<StackPanel>
+								<TextBlock Text="MATCHED"
+                                           FontSize="9" FontWeight="SemiBold"
+                                           Foreground="{DynamicResource TextSecondaryBrush}"
+                                           FontFamily="{StaticResource PrimaryFont}"/>
+								<TextBlock Text="{Binding UnchangedCount}"
+                                           FontSize="24" FontWeight="Bold"
+                                           Foreground="{DynamicResource TextSecondaryBrush}"
+                                           FontFamily="{StaticResource PrimaryFont}"/>
+								<TextBlock Text="Identical"
+                                           FontSize="10"
+                                           Foreground="{DynamicResource TextSecondaryBrush}"
+                                           FontFamily="{StaticResource PrimaryFont}"/>
+							</StackPanel>
+						</Border>
+					</Grid>
+
+					<!-- Filter row -->
+					<Border Background="{DynamicResource SurfaceBrush}"
+                            BorderBrush="{DynamicResource BorderBrush}"
+                            BorderThickness="1"
+                            CornerRadius="8"
+                            Padding="12,8">
+						<Grid>
+							<Grid.ColumnDefinitions>
+								<ColumnDefinition Width="220"/>
+								<ColumnDefinition Width="12"/>
+								<ColumnDefinition Width="140"/>
+								<ColumnDefinition Width="12"/>
+								<ColumnDefinition Width="140"/>
+								<ColumnDefinition/>
+								<ColumnDefinition Width="Auto"/>
+								<ColumnDefinition Width="12"/>
+								<ColumnDefinition Width="Auto"/>
+								<ColumnDefinition Width="12"/>
+								<ColumnDefinition Width="Auto"/>
+							</Grid.ColumnDefinitions>
+
+							<Grid Grid.Column="0">
+								<TextBox TabIndex="1" Style="{StaticResource ModernTextBoxStyle}"
+                                          Text="{Binding FilterText, UpdateSourceTrigger=PropertyChanged}"
+                                          Padding="30,6,10,6"
+                                          Height="32"/>
+								<TextBlock Text="🔍" FontSize="12"
+                                           Margin="9,0,0,0"
+                                           VerticalAlignment="Center"
+                                           IsHitTestVisible="False"
+                                           Foreground="{DynamicResource TextSecondaryBrush}"/>
+							</Grid>
+
+							<ComboBox Grid.Column="2" TabIndex="2"
+                                      Style="{StaticResource ModernComboBoxStyle}"
+                                      Height="32"
+                                      ItemsSource="{Binding ChangeTypeFilters}"
+                                      SelectedItem="{Binding FilterChangeType}"/>
+
+							<ComboBox Grid.Column="4" TabIndex="3"
+                                      Style="{StaticResource ModernComboBoxStyle}"
+                                      Height="32"
+                                      ItemsSource="{Binding ObjectTypeFilters}"
+                                      SelectedItem="{Binding FilterObjectType}"/>
+
+							<Button Grid.Column="6" TabIndex="4"
+                                    Content="✕ Clear"
+                                    Style="{StaticResource GhostButtonStyle}"
+                                    Height="32"
+                                    Command="{Binding ClearFilterCommand}"/>
+
+							<Button Grid.Column="8" TabIndex="5"
+                                    Content="📋 Generate Report"
+                                    Style="{StaticResource PrimaryButtonStyle}"
+                                    Height="32"
+                                    Command="{Binding NavigateToReportsCommand}"/>
+
+							<Button Grid.Column="10" TabIndex="6"
+                                    Content="⚡ Sync Selected"
+                                    Style="{StaticResource SuccessButtonStyle}"
+                                    Height="32"
+                                    Command="{Binding SyncSelectedCommand}"
+                                    Visibility="{Binding HasSyncableResults, Converter={StaticResource BoolVis}}"/>
+						</Grid>
+					</Border>
+				</StackPanel>
+			</Border>
+
+			<!-- Main content: grid + diff panel -->
+			<Grid Grid.Row="1" Margin="16,8,16,16">
+				<Grid.ColumnDefinitions>
+					<ColumnDefinition Width="*"/>
+					<ColumnDefinition x:Name="SplitterCol" Width="Auto"/>
+					<ColumnDefinition x:Name="DiffPanelCol" Width="0"/>
+				</Grid.ColumnDefinitions>
+
+				<!-- Results DataGrid -->
+				<Border Grid.Column="0"
+                        BorderBrush="{DynamicResource BorderBrush}"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        ClipToBounds="True">
+					<DataGrid x:Name="ResultsGrid" TabIndex="6"
+                               Style="{StaticResource AuditGridStyle}"
+                               ItemsSource="{Binding FilteredResults}"
+                               SelectedItem="{Binding SelectedResult}"
+                               SelectionChanged="OnResultSelectionChanged">
+						<DataGrid.Columns>
+
+							<DataGridTemplateColumn Width="40" CanUserSort="False">
+								<DataGridTemplateColumn.HeaderTemplate>
+									<DataTemplate>
+										<CheckBox HorizontalAlignment="Center" VerticalAlignment="Center"
+												  Style="{StaticResource ModernCheckBoxStyle}"
+												  Command="{Binding DataContext.ToggleSelectAllCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" />
+									</DataTemplate>
+								</DataGridTemplateColumn.HeaderTemplate>
+								<DataGridTemplateColumn.CellTemplate>
+									<DataTemplate>
+										<CheckBox IsChecked="{Binding IsSelected, UpdateSourceTrigger=PropertyChanged}"
+												  Style="{StaticResource ModernCheckBoxStyle}"
+												  HorizontalAlignment="Center" VerticalAlignment="Center"
+												  Visibility="{Binding SyncScript, Converter={StaticResource NullVis}}"/>
+									</DataTemplate>
+								</DataGridTemplateColumn.CellTemplate>
+							</DataGridTemplateColumn>
+
+							<DataGridTemplateColumn Header="Status" Width="90" CanUserSort="False">
+								<DataGridTemplateColumn.CellTemplate>
+									<DataTemplate>
+										<controls:StatusBadge ChangeType="{Binding ChangeType}"
+                                                              Margin="4,0"/>
+									</DataTemplate>
+								</DataGridTemplateColumn.CellTemplate>
+							</DataGridTemplateColumn>
+
+							<DataGridTextColumn Header="Object Type"
+                                                Binding="{Binding ObjectType, Converter={StaticResource EnumStr}}"
+                                                Width="120"/>
+
+							<DataGridTextColumn Header="Schema"
+                                                Binding="{Binding SchemaName}"
+                                                Width="90"/>
+
+							<DataGridTextColumn Header="Table"
+                                                Binding="{Binding ParentObject}"
+                                                Width="120"/>
+
+							<DataGridTextColumn Header="Object Name"
+                                                Binding="{Binding ObjectName}"
+                                                Width="*"
+                                                FontWeight="SemiBold"/>
+
+							<DataGridTemplateColumn Header="Differences" Width="280" CanUserSort="False">
+								<DataGridTemplateColumn.CellTemplate>
+									<DataTemplate>
+										<TextBlock Text="{Binding Differences[0]}"
+                                                   FontSize="11"
+                                                   FontFamily="{StaticResource PrimaryFont}"
+                                                   Foreground="{DynamicResource ModifiedBrush}"
+                                                   TextTrimming="CharacterEllipsis"
+                                                   VerticalAlignment="Center">
+											<TextBlock.ToolTip>
+												<ToolTip>
+													<TextBlock Text="{Binding AllDifferences}"/>
+												</ToolTip>
+											</TextBlock.ToolTip>
+										</TextBlock>
+									</DataTemplate>
+								</DataGridTemplateColumn.CellTemplate>
+							</DataGridTemplateColumn>
+
+							<DataGridTextColumn Header="Detected"
+                                                Binding="{Binding DetectedAt, StringFormat='{}{0:HH:mm:ss}'}"
+                                                Width="80"/>
+						</DataGrid.Columns>
+					</DataGrid>
+				</Border>
+
+				<!-- Grid Splitter -->
+				<GridSplitter Grid.Column="1"
+                              Width="6"
+                              HorizontalAlignment="Center"
+                              VerticalAlignment="Stretch"
+                              Background="{DynamicResource BorderBrush}"
+                              Visibility="{Binding ShowDiffPanel, Converter={StaticResource BoolVis}}"/>
+
+				<!-- Side-by-side Diff Panel -->
+				<Border Grid.Column="2"
+                        Margin="4,0,0,0"
+                        BorderBrush="{DynamicResource BorderBrush}"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Visibility="{Binding ShowDiffPanel, Converter={StaticResource BoolVis}}"
+                        ClipToBounds="True">
+					<Grid>
+						<Grid.RowDefinitions>
+							<RowDefinition Height="Auto"/>
+							<RowDefinition Height="*"/>
+						</Grid.RowDefinitions>
+
+						<!-- Diff header -->
+						<Grid Grid.Row="0"
+                              Background="{DynamicResource GridHeaderBgBrush}"
+                              x:Name="DiffHeader">
+							<Grid.ColumnDefinitions>
+								<ColumnDefinition Width="Auto"/>
+								<ColumnDefinition Width="8"/>
+								<ColumnDefinition/>
+								<ColumnDefinition/>
+								<ColumnDefinition Width="Auto"/>
+							</Grid.ColumnDefinitions>
+
+							<TextBlock Grid.Column="0"
+                                       Text="#"
+                                       FontSize="10" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                       FontFamily="{StaticResource MonoFont}"
+                                       Width="30"
+                                       Margin="8,8,0,8"
+                                       VerticalAlignment="Center"/>
+
+							<TextBlock Grid.Column="2"
+                                       Text="SOURCE"
+                                       FontSize="10" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource AddedBrush}"
+                                       FontFamily="{StaticResource PrimaryFont}"
+                                       Margin="8,8,0,8"
+                                       VerticalAlignment="Center"/>
+
+							<TextBlock Grid.Column="3"
+                                       Text="TARGET"
+                                       FontSize="10" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource DeletedBrush}"
+                                       FontFamily="{StaticResource PrimaryFont}"
+                                       Margin="8,8,0,8"
+                                       VerticalAlignment="Center"/>
+
+							<Button Grid.Column="4"
+                                    Content="✕"
+                                    Style="{StaticResource IconButtonStyle}"
+                                    Margin="4"
+                                    Click="OnCloseDiffPanel"/>
+						</Grid>
+
+						<!-- Diff content -->
+						<ScrollViewer Grid.Row="1"
+                                      VerticalScrollBarVisibility="Auto"
+                                      HorizontalScrollBarVisibility="Auto"
+                                      Background="{DynamicResource SurfaceBrush}">
+							<ItemsControl ItemsSource="{Binding DiffLines}">
+								<ItemsControl.ItemTemplate>
+									<DataTemplate DataType="{x:Type vm:DiffLine}">
+										<Grid MinHeight="22">
+											<Grid.ColumnDefinitions>
+												<ColumnDefinition Width="30"/>
+												<ColumnDefinition Width="16"/>
+												<ColumnDefinition/>
+												<ColumnDefinition/>
+											</Grid.ColumnDefinitions>
+
+											<!-- Line number -->
+											<TextBlock Grid.Column="0"
+                                                       Text="{Binding LineNumber}"
+                                                       FontSize="10"
+                                                       FontFamily="{StaticResource MonoFont}"
+                                                       Foreground="{DynamicResource TextDisabledBrush}"
+                                                       TextAlignment="Right"
+                                                       Margin="4,2"
+                                                       VerticalAlignment="Center"/>
+
+											<!-- Type indicator -->
+											<TextBlock Grid.Column="1"
+                                                       Text="{Binding TypeLabel}"
+                                                       FontSize="11"
+                                                       FontFamily="{StaticResource MonoFont}"
+                                                       FontWeight="Bold"
+                                                       VerticalAlignment="Center"
+                                                       HorizontalAlignment="Center">
+												<TextBlock.Style>
+													<Style TargetType="TextBlock">
+														<Setter Property="Foreground"
+                                                                Value="{DynamicResource TextSecondaryBrush}"/>
+													</Style>
+												</TextBlock.Style>
+											</TextBlock>
+
+											<!-- Source value -->
+											<Border Grid.Column="2"
+                                                    Padding="6,2">
+												<Border.Style>
+													<Style TargetType="Border">
+														<Setter Property="Background" Value="Transparent"/>
+														<Style.Triggers>
+															<DataTrigger Binding="{Binding Type}"
+                                                                         Value="Removed">
+																<Setter Property="Background"
+                                                                        Value="{DynamicResource DeletedBgBrush}"/>
+															</DataTrigger>
+															<DataTrigger Binding="{Binding SourceLine}"
+                                                                         Value="Missing">
+																<Setter Property="Background"
+                                                                        Value="{DynamicResource DeletedBgBrush}"/>
+															</DataTrigger>
+														</Style.Triggers>
+													</Style>
+												</Border.Style>
+												<TextBlock Text="{Binding SourceLine}"
+                                                           FontFamily="{StaticResource MonoFont}"
+                                                           FontSize="11"
+                                                           TextWrapping="Wrap"
+                                                           VerticalAlignment="Center">
+													<TextBlock.Style>
+														<Style TargetType="TextBlock">
+															<Setter Property="Foreground"
+                                                                    Value="{DynamicResource TextPrimaryBrush}"/>
+															<Style.Triggers>
+																<DataTrigger Binding="{Binding Type}"
+                                                                             Value="Removed">
+																	<Setter Property="Foreground"
+                                                                            Value="{DynamicResource DeletedBrush}"/>
+																</DataTrigger>
+																<DataTrigger Binding="{Binding SourceLine}"
+                                                                             Value="Missing">
+																	<Setter Property="Foreground"
+                                                                            Value="{DynamicResource DeletedBrush}"/>
+																</DataTrigger>
+															</Style.Triggers>
+														</Style>
+													</TextBlock.Style>
+												</TextBlock>
+											</Border>
+
+											<!-- Target value -->
+											<Border Grid.Column="3"
+                                                    Padding="6,2"
+                                                    BorderBrush="{DynamicResource BorderBrush}"
+                                                    BorderThickness="1,0,0,0">
+												<Border.Style>
+													<Style TargetType="Border">
+														<Setter Property="Background" Value="Transparent"/>
+														<Style.Triggers>
+															<DataTrigger Binding="{Binding Type}"
+                                                                         Value="Added">
+																<Setter Property="Background"
+                                                                        Value="{DynamicResource AddedBgBrush}"/>
+															</DataTrigger>
+															<DataTrigger Binding="{Binding TargetLine}"
+                                                                         Value="Missing">
+																<Setter Property="Background"
+                                                                        Value="{DynamicResource DeletedBgBrush}"/>
+															</DataTrigger>
+														</Style.Triggers>
+													</Style>
+												</Border.Style>
+												<TextBlock Text="{Binding TargetLine}"
+                                                           FontFamily="{StaticResource MonoFont}"
+                                                           FontSize="11"
+                                                           TextWrapping="Wrap"
+                                                           VerticalAlignment="Center">
+													<TextBlock.Style>
+														<Style TargetType="TextBlock">
+															<Setter Property="Foreground"
+                                                                    Value="{DynamicResource TextPrimaryBrush}"/>
+															<Style.Triggers>
+																<DataTrigger Binding="{Binding Type}"
+                                                                             Value="Added">
+																	<Setter Property="Foreground"
+                                                                            Value="{DynamicResource AddedBrush}"/>
+																</DataTrigger>
+																<DataTrigger Binding="{Binding TargetLine}"
+                                                                             Value="Missing">
+																	<Setter Property="Foreground"
+                                                                            Value="{DynamicResource DeletedBrush}"/>
+																</DataTrigger>
+															</Style.Triggers>
+														</Style>
+													</TextBlock.Style>
+												</TextBlock>
+											</Border>
+										</Grid>
+									</DataTemplate>
+								</ItemsControl.ItemTemplate>
+							</ItemsControl>
+						</ScrollViewer>
+					</Grid>
+				</Border>
+			</Grid>
+		</Grid>
+	</Grid>
+</UserControl>
