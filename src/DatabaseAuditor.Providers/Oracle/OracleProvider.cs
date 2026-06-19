@@ -496,4 +496,12 @@ public class OracleProvider : BaseDatabaseProvider
             Columns = ((string?)r.COLUMNS)?.Split(',').ToList() ?? []
         }).ToList();
     }
+
+    public override Task<List<UserDefinedTableTypeSchema>> GetUserDefinedTableTypesAsync(
+        ConnectionProfile connection,
+        IReadOnlyCollection<string>? selectedTypes = null,
+        CancellationToken cancellationToken = default)
+    {
+        return Task.FromResult(new List<UserDefinedTableTypeSchema>());
+    }
 }

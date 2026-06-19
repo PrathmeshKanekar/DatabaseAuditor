@@ -449,4 +449,12 @@ public class MySqlProvider : BaseDatabaseProvider
             Columns = ((string?)r.Columns)?.Split(',').ToList() ?? []
         }).ToList();
     }
+
+    public override Task<List<UserDefinedTableTypeSchema>> GetUserDefinedTableTypesAsync(
+        ConnectionProfile connection,
+        IReadOnlyCollection<string>? selectedTypes = null,
+        CancellationToken cancellationToken = default)
+    {
+        return Task.FromResult(new List<UserDefinedTableTypeSchema>());
+    }
 }

@@ -147,6 +147,19 @@ public abstract class BaseDatabaseProvider : IDatabaseProvider
         IReadOnlyCollection<string>? selectedTables = null,
         CancellationToken cancellationToken = default);
 
+    public abstract Task<List<UserDefinedTableTypeSchema>> GetUserDefinedTableTypesAsync(
+        ConnectionProfile connection,
+        IReadOnlyCollection<string>? selectedTypes = null,
+        CancellationToken cancellationToken = default);
+
+    public virtual async Task<List<string>> GetUserDefinedTableTypeNamesAsync(
+        ConnectionProfile connection,
+        CancellationToken cancellationToken = default)
+        => (await GetUserDefinedTableTypesAsync(connection, null, cancellationToken))
+            .Select(t => t.FullName)
+            .OrderBy(n => n)
+            .ToList();
+
     public virtual async Task ExecuteSqlAsync(
         ConnectionProfile connection,
         string sql,

@@ -30,6 +30,7 @@ public partial class MainWindow : Window
     private ResultsView? _resultsView;
     private ReportsView? _reportsView;
     private SettingsView? _settingsView;
+    private CloneView? _cloneView;
 
     // Active nav button
     private Button? _activeNavButton;
@@ -83,6 +84,9 @@ public partial class MainWindow : Window
 
     private void OnNavResults(object sender, RoutedEventArgs e)
         => NavigateTo(BtnResults, GetResultsView(), "Comparison Results");
+
+    private void OnNavClone(object sender, RoutedEventArgs e)
+        => NavigateTo(BtnClone, GetCloneView(), "Clone Database Tables");
 
     private void OnNavReports(object sender, RoutedEventArgs e)
         => NavigateToReports();
@@ -174,6 +178,9 @@ public partial class MainWindow : Window
 
     private SettingsView GetSettingsView()
         => _settingsView ??= App.ServiceProvider.GetRequiredService<SettingsView>();
+
+    private CloneView GetCloneView()
+        => _cloneView ??= App.ServiceProvider.GetRequiredService<CloneView>();
 
     // ─────────────────────────────────────────────
     // Theme Toggle — FIX: Shows proper light/dark label (not True/False)

@@ -451,4 +451,12 @@ public class PostgreSqlProvider : BaseDatabaseProvider
             Columns = (r.columns as string)?.Split(',').ToList() ?? new List<string>()
         }).ToList();
     }
+
+    public override Task<List<UserDefinedTableTypeSchema>> GetUserDefinedTableTypesAsync(
+        ConnectionProfile connection,
+        IReadOnlyCollection<string>? selectedTypes = null,
+        CancellationToken cancellationToken = default)
+    {
+        return Task.FromResult(new List<UserDefinedTableTypeSchema>());
+    }
 }
